@@ -6,11 +6,21 @@ import numpy as np
 cap = cv2.VideoCapture('video.mp4')
 frame_width = int(600)
 frame_height = int(450)
-out = cv2.VideoWriter('outpy2.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (frame_width,frame_height))
-pt = [(0,200), (-700,450), (600,200), (1300,450)]
+#out = cv2.VideoWriter('outpy2.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (frame_width,frame_height))
+# Laptop camera 
+pt = [(0,225), (-1100,500), (600,225), (1700,500)]
+
+# intel camera 
+#pt = [(0,225), (-1500,500), (600,225), (2100,500)]
+
 
 while True:
+
+    #############################################################################
+    ##########################  cone detection  #################################
+    #############################################################################
     _, frame = cap.read()
+    #frame = cv2.imread('coneimg.png')
     start_time = time.time()
     img_HSV = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
     img_thresh_low = cv2.inRange(img_HSV, np.array([0, 135, 135]),np.array([15, 255, 255]))  # everything that is included in the "left red"
@@ -108,7 +118,16 @@ while True:
         #cv2.circle(transf,(150, 100), 5, (0,0,255), -1)
         #cv2.circle(transf,((rect[0] + rect[2])//1, (rect[1] + rect[3])//1), 5, (0,0,255), -1)
         #cv2.circle(transf,((rect[0] + rect[2])//1, (rect[1] + rect[3])//1), 5, (0,0,255), -1)
-    cv2.imshow("Red", img_res)
+    #cv2.imshow("Red", img_res)
+
+    #############################################################################
+
+
+
+    #############################################################################
+    ####################### inverse perspective transform   #####################
+    #############################################################################
+
     img = cv2.resize(img_res, (604, 453))
     rows,cols,channels = img.shape
 
@@ -122,15 +141,19 @@ while True:
     cv2.circle(img,pt[2], 5, (0,0,255), -1) 	# Filled
     cv2.circle(img,pt[3], 5, (0,0,255), -1) 	# Filled
 
-			#pts1 = np.float32([[30,111],[34,326],[561,53],[554,381]])
+	#pts1 = np.float32([[30,111],[34,326],[561,53],[554,381]])
     pts1 = np.float32([pt[0],pt[1],pt[2],pt[3]])
     pts2 = np.float32([[0,0],[0,450],[600,0],[600,450]])
     M = cv2.getPerspectiveTransform(pts1,pts2)
     N = cv2.getPerspectiveTransform(pts1,pts2)
     dst = cv2.warpPerspective(img,M,(600,450), flags=cv2.INTER_LINEAR)
-    dst2 = cv2.warpPerspective(transf,M,(600,450), flags=cv2.INTER_LINEAR)
     cv2.imshow('image',img)
     dst = cv2.resize(dst, (600, 450))
+
+    mybox = []
+    left_box = []
+    right_box = []
+
     for rect in bounding_rects:
 
         # provide a point you wish to map from image 1 to image 2
@@ -139,18 +162,36 @@ while True:
 
         # finally, get the mapping
         pointsOut = cv2.perspectiveTransform(a, N)
-        coor1, coor2 = pointsOut[0][0][0], pointsOut[0][0][1]
-        print('transformed', pointsOut)
-        cv2.circle(transf,(coor1, coor2), 5, (0,0,255), -1)
+        box = pointsOut[0][0][0], pointsOut[0][0][1]
+        mybox.append(box)
+        cv2.circle(transf,box, 5, (0,0,255), -1)
 
-    cv2.imshow("coordinates Real??", transf)
+    for i in range(len(mybox)):
+        x, y = mybox[i]
+        if(x < 300):
+            left_box.append(mybox[i])
+            #transf = cv2.line(transf,(0,0),mybox[i],(255,0,0),5)
+        else:
+            right_box.append(mybox[i])
+            #transf = cv2.line(transf,(0,0),mybox[i],(255,0,0),5)
 
+    for i in range(len(left_box) - 1):
+        transf = cv2.line(transf,left_box[i],left_box[i+1],(255,0,0),5)
+
+    for i in range(len(right_box) - 1):
+        transf = cv2.line(transf,right_box[i],right_box[i+1],(255,0,0),5)
+
+    
 
     #out.write(dst)
+    cv2.imshow("coordinates Real??", transf)
     cv2.imshow('transform', dst)
-    cv2.imshow('transform2', dst2)
     #print(str(len(bounding_rects)) + ' cone(s) found in the picture')
-    print("--- %s seconds ---" % (time.time() - start_time))
+    #print("--- %s seconds ---" % (time.time() - start_time))
+    mybox.clear()
+
+    #############################################################################
+
     start_time = time.time()
     key = cv2.waitKey(1)
     if key == 27:
@@ -158,5 +199,5 @@ while True:
 
 ## Close and exit
 cap.release()
-out.release()
+#out.release()
 cv2.destroyAllWindows()
