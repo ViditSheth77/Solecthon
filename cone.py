@@ -1,18 +1,50 @@
 import cv2
 import time
-#from matplotlib import pyplot as plt
 import numpy as np
 #path = "http://192.168.1.202:4747/video"
 cap = cv2.VideoCapture('video.mp4')
 frame_width = int(600)
 frame_height = int(450)
-#out = cv2.VideoWriter('outpy2.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 30, (frame_width,frame_height))
 # Laptop camera 
 pt = [(0,225), (-1100,500), (600,225), (1700,500)]
 
 # intel camera 
 #pt = [(0,225), (-1500,500), (600,225), (2100,500)]
 
+def convex_hull_pointing_up(ch):
+    points_above_center, points_below_center = [], []
+    x, y, w, h = cv2.boundingRect(ch)  # coordinates of the upper left corner of the describing rectangle, width and height
+    aspect_ratio = w / h  # ratio of rectangle width to height
+
+        # if the rectangle is narrow, continue the definition. If not, the circuit is not suitable
+    if aspect_ratio < 0.8:
+	# We classify each point of the contour as lying above or below the center	
+            vertical_center = y + h / 2
+
+            for point in ch:
+                if point[0][
+                    1] < vertical_center:  # if the y coordinate of the point is above the center, then add this point to the list of points above the center
+                    points_above_center.append(point)
+                elif point[0][1] >= vertical_center:
+                    points_below_center.append(point)
+
+            # determine the x coordinates of the extreme points below the center
+            left_x = points_below_center[0][0][0]
+            right_x = points_below_center[0][0][0]
+            for point in points_below_center:
+                if point[0][0] < left_x:
+                    left_x = point[0][0]
+                if point[0][0] > right_x:
+                    right_x = point[0][0]
+
+            # check if the upper points of the contour lie outside the "base". If yes, then the circuit does not fit
+            for point in points_above_center:
+                if (point[0][0] < left_x) or (point[0][0] > right_x):
+                    return False
+    else:
+        return False
+
+    return True
 
 while True:
 
@@ -21,6 +53,7 @@ while True:
     #############################################################################
     _, frame = cap.read()
     #frame = cv2.imread('coneimg.png')
+    frame = cv2.resize(frame, (600, 450))
     start_time = time.time()
     img_HSV = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
     img_thresh_low = cv2.inRange(img_HSV, np.array([0, 135, 135]),np.array([15, 255, 255]))  # everything that is included in the "left red"
@@ -57,49 +90,6 @@ while True:
     img_convex_hulls_3to10 = np.zeros_like(img_edges)
     cv2.drawContours(img_convex_hulls_3to10, convex_hulls_3to10, -1, (255, 255, 255), 2)
 
-
-    def convex_hull_pointing_up(ch):
-        '''Determines if the path is directed up.
-        If so, then this is a cone. '''
-
-        # contour points above center and below
-
-        points_above_center, points_below_center = [], []
-
-        x, y, w, h = cv2.boundingRect(ch)  # coordinates of the upper left corner of the describing rectangle, width and height
-        aspect_ratio = w / h  # ratio of rectangle width to height
-
-        # if the rectangle is narrow, continue the definition. If not, the circuit is not suitable
-        if aspect_ratio < 0.8:
-	# We classify each point of the contour as lying above or below the center	
-            vertical_center = y + h / 2
-
-            for point in ch:
-                if point[0][
-                    1] < vertical_center:  # if the y coordinate of the point is above the center, then add this point to the list of points above the center
-                    points_above_center.append(point)
-                elif point[0][1] >= vertical_center:
-                    points_below_center.append(point)
-
-            # determine the x coordinates of the extreme points below the center
-            left_x = points_below_center[0][0][0]
-            right_x = points_below_center[0][0][0]
-            for point in points_below_center:
-                if point[0][0] < left_x:
-                    left_x = point[0][0]
-                if point[0][0] > right_x:
-                    right_x = point[0][0]
-
-            # check if the upper points of the contour lie outside the "base". If yes, then the circuit does not fit
-            for point in points_above_center:
-                if (point[0][0] < left_x) or (point[0][0] > right_x):
-                    return False
-        else:
-            return False
-
-        return True
-
-
     cones = []
     bounding_rects = []
     for ch in convex_hulls_3to10:
@@ -119,6 +109,8 @@ while True:
         #cv2.circle(transf,((rect[0] + rect[2])//1, (rect[1] + rect[3])//1), 5, (0,0,255), -1)
         #cv2.circle(transf,((rect[0] + rect[2])//1, (rect[1] + rect[3])//1), 5, (0,0,255), -1)
     #cv2.imshow("Red", img_res)
+    #cv2.imshow('seeing', img_thresh)
+
 
     #############################################################################
 
@@ -128,7 +120,7 @@ while True:
     ####################### inverse perspective transform   #####################
     #############################################################################
 
-    img = cv2.resize(img_res, (604, 453))
+    img = cv2.resize(img_res, (600, 450))
     rows,cols,channels = img.shape
 
     #cv2.circle(transf,pt[0], 5, (0,0,255), -1) 	# Filled
@@ -163,6 +155,7 @@ while True:
         # finally, get the mapping
         pointsOut = cv2.perspectiveTransform(a, N)
         box = pointsOut[0][0][0], pointsOut[0][0][1]
+        print(box)
         mybox.append(box)
         cv2.circle(transf,box, 5, (0,0,255), -1)
 
@@ -175,20 +168,25 @@ while True:
             right_box.append(mybox[i])
             #transf = cv2.line(transf,(0,0),mybox[i],(255,0,0),5)
 
+    # Only for visual purpose
     for i in range(len(left_box) - 1):
         transf = cv2.line(transf,left_box[i],left_box[i+1],(255,0,0),5)
-
+    # Only for visual purpose
     for i in range(len(right_box) - 1):
         transf = cv2.line(transf,right_box[i],right_box[i+1],(255,0,0),5)
 
+ #   for i in range(len(right_box) - 1):
+  #      transf = cv2.line(transf,right_box[i]+left_box[i],right_box[i+1]+left_box[i+1],(255,0,0),5)    
+
     
 
-    #out.write(dst)
     cv2.imshow("coordinates Real??", transf)
     cv2.imshow('transform', dst)
     #print(str(len(bounding_rects)) + ' cone(s) found in the picture')
     #print("--- %s seconds ---" % (time.time() - start_time))
     mybox.clear()
+    left_box.clear()
+    right_box.clear()
 
     #############################################################################
 
@@ -199,5 +197,4 @@ while True:
 
 ## Close and exit
 cap.release()
-#out.release()
 cv2.destroyAllWindows()
