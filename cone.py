@@ -11,6 +11,21 @@ pt = [(0,225), (-1100,500), (600,225), (1700,500)]
 # intel camera 
 #pt = [(0,225), (-1500,500), (600,225), (2100,500)]
 
+def distance(pt_1, pt_2):
+    pt_1 = np.array((pt_1[0], pt_1[1]))
+    pt_2 = np.array((pt_2[0], pt_2[1]))
+    return np.linalg.norm(pt_1-pt_2)
+
+def closest_node(node, nodes):
+    pt = []
+    dist = 9999999
+    for n in nodes:
+        if distance(node, n) <= dist:
+            dist = distance(node, n)
+            pt = n
+    return pt
+
+
 def convex_hull_pointing_up(ch):
     points_above_center, points_below_center = [], []
     x, y, w, h = cv2.boundingRect(ch)  # coordinates of the upper left corner of the describing rectangle, width and height
@@ -159,26 +174,53 @@ while True:
         mybox.append(box)
         cv2.circle(transf,box, 5, (0,0,255), -1)
 
+    variable_left = 0
+    max_y_left = 0
+    max_y_right = 0
+
+    '''
     for i in range(len(mybox)):
         x, y = mybox[i]
-        if(x < 300):
+        if(x < 300):# and y > 225):
             left_box.append(mybox[i])
-            #transf = cv2.line(transf,(0,0),mybox[i],(255,0,0),5)
-        else:
+        elif(x > 300 ):#and y > 255):
             right_box.append(mybox[i])
+
+    '''
+    for i in range(len(mybox)):
+        x, y = mybox[i]
+        if(x < 300 and y > max_y_left):
+            max_y_left = y
+            variable_left = mybox[i]
+            #left_box.append(mybox[i])
+            #transf = cv2.line(transf,(0,0),mybox[i],(255,0,0),5)
+        elif(x > 300 and y > max_y_right):
+            max_y_right = y
+            variable_right = mybox[i]
+            #right_box.append(mybox[i])
             #transf = cv2.line(transf,(0,0),mybox[i],(255,0,0),5)
 
     # Only for visual purpose
-    for i in range(len(left_box) - 1):
-        transf = cv2.line(transf,left_box[i],left_box[i+1],(255,0,0),5)
-    # Only for visual purpose
-    for i in range(len(right_box) - 1):
-        transf = cv2.line(transf,right_box[i],right_box[i+1],(255,0,0),5)
-
- #   for i in range(len(right_box) - 1):
-  #      transf = cv2.line(transf,right_box[i]+left_box[i],right_box[i+1]+left_box[i+1],(255,0,0),5)    
-
+    cv2.circle(transf,variable_left, 5, (0,255,0), -1)
+    cv2.circle(transf,variable_right, 5, (0,255,0), -1)
     
+    # Only for visual purpose
+    #for i in range(len(left_box) - 1):
+    #    transf = cv2.line(transf,left_box[i],left_box[i+1],(255,0,0),5)
+    # Only for visual purpose
+    #for i in range(len(right_box) - 1):
+    #    transf = cv2.line(transf,right_box[i],right_box[i+1],(255,0,0),5)
+
+    #for i in range(len(right_box) - 1):
+    #   transf = cv2.line(transf,(right_box[i]+left_box[i])/2,(right_box[i+1]+left_box[i+1])/2,(255,0,0),5)    
+    
+    mybox.remove(variable_left)
+
+    for i in range(len(mybox)):
+        ptss = closest_node(variable_left, mybox)
+        transf = cv2.line(transf,ptss,variable_left,(255,0,0),5)
+        variable_left = ptss
+        mybox.remove(ptss)
 
     cv2.imshow("coordinates Real??", transf)
     cv2.imshow('transform', dst)
