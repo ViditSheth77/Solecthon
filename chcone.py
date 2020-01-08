@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import math
 
-#path = "http://192.168.1.202:4747/video"
-cap = cv2.VideoCapture('video3.mp4')
+path = "http://192.168.43.156:4747/video"
+cap = cv2.VideoCapture('video.mp4')
 
 # Laptop camera 
 pt = [(0,100), (-900,450), (600,100), (1500,450)]
@@ -18,7 +18,10 @@ def angle(p1, p2):
         slope = (q - y)/(p - x)
     except:
         slope = 99999
-    return( np.arctan(slope)*180/math.pi )
+    angle = np.arctan(slope)*180/math.pi
+    if(angle > 0):
+        return(90 - angle)
+    return -1*(90 + angle)
 
 while True:
 
@@ -175,39 +178,47 @@ while True:
         x, y = mybox[i]
         if(x < 300):
             left_box.append(mybox[i])
-            ##transf = cv2.line(transf,(0,0),mybox[i],(255,0,0),5)
         else:
             right_box.append(mybox[i])
-            #transf = cv2.line(transf,(0,0),mybox[i],(255,0,0),5)
 
-    for i in range(len(left_box) - 1):
+    '''for i in range(len(left_box) - 1):
         cv2.circle(transf,left_box[0], 5, (0,0,255), -1) 	# Filled
         dst2 = cv2.line(dst2,left_box[i],left_box[i+1],(255,0,0),5)
 
     for i in range(len(right_box) - 1):
         cv2.circle(transf,right_box[0], 5, (0,0,255), -1) 	# Filled
-        dst2 = cv2.line(dst2,right_box[i],right_box[i+1],(255,0,0),5)
+        dst2 = cv2.line(dst2,right_box[i],right_box[i+1],(255,0,0),5)'''
 
+    #############################################################################
+
+    #############################################################################
+    ####################### path planning   #####################################
+    #############################################################################
+
+     #############################################################################
+    
     lines = []
-    lines.append((300,450))
+    lines.append((300,500))
 
-    mid_c = 75
+    mid_c = 100
 
     if( len(left_box) == 0 and len(right_box) == 0 ):
         lines.append((300,400))
-        # kuch 
+         
     elif( len(left_box) == 0 and len(right_box) != 0 ):
         for i in range(len(right_box)):
+            #print( 'test1' )
             x, y = right_box[i]
             x = x - mid_c
             lines.append( (int(x), int(y)) )
-        #kuch
+        
     elif( len(left_box) != 0 and len(right_box) == 0 ):
         for i in range(len(left_box)):
+            #print( 'test2' )
             x, y = left_box[i]
             x = x + mid_c
             lines.append( (int(x), int(y)) )
-        #kuch
+        
     elif( len(left_box) != 0 and len(right_box) != 0 ):
 
         small_len  = 0
@@ -218,11 +229,12 @@ while True:
             small_len = len(left_box)
         
         for i in range(small_len):
-            x, y = tuple(np.add((right_box[i]), (left_box[i])))
-            x = x//2
-            y = y//2
-            cv2.circle(transf,(int(x), int(y)), 5, (255,0,255), -1) 	# Filled
-            lines.append( (int(x), int(y)) )
+                #print( 'test3' )
+                x, y = tuple(np.add((right_box[i]), (left_box[i])))
+                x = x//2
+                y = y//2
+                cv2.circle(transf,(int(x), int(y)), 5, (255,0,255), -1) 	# Filled
+                lines.append( (int(x), int(y)) )
 
         '''if(len(left_box) > len(right_box)):
             i = len(right_box) + 1
@@ -230,8 +242,6 @@ while True:
                 x, y = left_box[i]
                 x = x + mid_c
                 lines.append( (int(x), int(y)) )
-
-
                 i = i + 1
                 transf = cv2.line(transf,(0,0),lines[-1],(255,0,0),5)
 
@@ -242,18 +252,16 @@ while True:
                 x, y = right_box[i]
                 x = x - mid_c
                 lines.append( (int(x), int(y)) )
-
-
                 i = i + 1
                 transf = cv2.line(transf,(0,0),lines[-1],(255,0,0),5)'''
 
     for i in range(len(lines) - 1):
         #cv2.circle(transf,lines[0], 5, (255,255,0), -1) 	# Filled
-        #print( lines[i+1] )
+        #print( 'test4' )
         dst2 = cv2.line(dst2,lines[i],lines[i+1],(255,255,0),5)
         transf = cv2.line(transf,lines[i],lines[i+1],(255,255,0),5)        
 
-    print( angle(lines[0], lines[1]) )
+    print( lines[0], lines[1] , angle(lines[0], lines[1]) )
 
 
     cv2.imshow('image',img_res)
@@ -268,7 +276,7 @@ while True:
 
     #############################################################################
 
-    key = cv2.waitKey(100)
+    key = cv2.waitKey(50)
     if key == 27:
         break
 
@@ -276,4 +284,3 @@ while True:
 cap.release()
 #out.release()
 cv2.destroyAllWindows()
-
