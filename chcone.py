@@ -6,10 +6,10 @@ path = "http://192.168.43.156:4747/video"
 cap = cv2.VideoCapture('video.mp4')
 
 # Laptop camera 
-pt = [(0,100), (-900,450), (600,100), (1500,450)]
+#pt = [(0,100), (-900,450), (600,100), (1500,450)]
 
 # intel camera 
-#pt = [(0,225), (-1500,500), (600,225), (2100,500)]
+pt = [(0,225), (-1500,500), (600,225), (2100,500)]
 
 def angle(p1, p2):
     x, y = p1
@@ -23,13 +23,7 @@ def angle(p1, p2):
         return(90 - angle)
     return -1*(90 + angle)
 
-while True:
-
-    #############################################################################
-    ##########################  cone detection  #################################
-    #############################################################################
-    _, frame = cap.read()
-    #frame = cv2.imread('coneimg.png')
+def coneDetect(frame):
     frame = cv2.resize(frame, (600, 450))
     img_HSV = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
     img_thresh_low = cv2.inRange(img_HSV, np.array([0, 135, 135]),np.array([15, 255, 255]))  # everything that is included in the "left red"
@@ -120,57 +114,33 @@ while True:
     cv2.drawContours(img_res, cones, -1, (255, 255, 255), 2)
     transf = np.zeros([450, 600, 3])
 
-    mybox = []
-    pts1 = np.float32([pt[0],pt[1],pt[2],pt[3]])
-    pts2 = np.float32([[0,0],[0,450],[600,0],[600,450]])
-    M = cv2.getPerspectiveTransform(pts1,pts2)
-    transf = np.zeros([450, 600, 3])
-    dst2 = cv2.warpPerspective(img_res,M,(600,450), flags=cv2.INTER_LINEAR)
-
-
     for rect in bounding_rects:
         #print('previous', rect[0], rect[1], rect[2], rect[3])
         cv2.rectangle(img_res, (rect[0], rect[1]), (rect[0] + rect[2], rect[1] + rect[3]), (1, 255, 1), 6)
         cv2.circle(img_res,(rect[0], rect[1]), 5, (0,200,255), -1)
         cv2.circle(img_res,(rect[0] + rect[2], rect[1] + rect[3]), 5, (0,200,255), -1)
         cv2.circle(img_res,(rect[0] + rect[2]//2, rect[1] + rect[3]), 5, (255,255,255), -1)
+
+    return bounding_rects, img_res
+
+def inv_map(frame):
+    pts1 = np.float32([pt[0],pt[1],pt[2],pt[3]])
+    pts2 = np.float32([[0,0],[0,450],[600,0],[600,450]])
+    M = cv2.getPerspectiveTransform(pts1,pts2)
+    image = cv2.warpPerspective(frame,M,(600,450), flags=cv2.INTER_LINEAR)
+    return image, M
+
+def inv_coor(bounding_rects, M):
+    mybox = []
+    for rect in bounding_rects:
         a = np.array([[(rect[0] + rect[2]//2), (rect[1] + rect[3])]], dtype='float32')
         a = np.array([a])
-
         pointsOut = cv2.perspectiveTransform(a, M)
         box = pointsOut[0][0][0], pointsOut[0][0][1]
         mybox.append(box)
-        cv2.circle(img_res,((rect[0] + rect[2]//2), (rect[1] + rect[3])), 5, (0,0,255), -1)
-        cv2.circle(dst2,box, 5, (0,225,255), -1)
-        cv2.circle(transf,box, 5, (0,225,255), -1)
+    return mybox
 
-
-
-    #############################################################################
-
-
-
-    #############################################################################
-    ####################### inverse perspective transform   #####################
-    #############################################################################
-
-    img = cv2.resize(img_res, (600, 450))
-    rows,cols,channels = img.shape
-
-    #cv2.circle(transf,pt[0], 5, (0,0,255), -1) 	# Filled
-    #cv2.circle(transf,pt[1], 5, (0,0,255), -1) 	# Filled
-    #cv2.circle(transf,pt[2], 5, (0,0,255), -1) 	# Filled
-    #scv2.circle(transf,pt[3], 5, (0,0,255), -1) 	# Filled
-
-    cv2.circle(img,pt[0], 5, (0,0,255), -1) 	# Filled
-    cv2.circle(img,pt[1], 5, (0,0,255), -1) 	# Filled
-    cv2.circle(img,pt[2], 5, (0,0,255), -1) 	# Filled
-    cv2.circle(img,pt[3], 5, (0,0,255), -1) 	# Filled
-
-	#pts1 = np.float32([[30,111],[34,326],[561,53],[554,381]])
-
-    dst = cv2.warpPerspective(img,M,(600,450), flags=cv2.INTER_LINEAR)
-
+def pathplan(mybox):
     left_box = []
     right_box = []
 
@@ -181,13 +151,6 @@ while True:
         else:
             right_box.append(mybox[i])
 
-    '''for i in range(len(left_box) - 1):
-        cv2.circle(transf,left_box[0], 5, (0,0,255), -1) 	# Filled
-        dst2 = cv2.line(dst2,left_box[i],left_box[i+1],(255,0,0),5)
-
-    for i in range(len(right_box) - 1):
-        cv2.circle(transf,right_box[0], 5, (0,0,255), -1) 	# Filled
-        dst2 = cv2.line(dst2,right_box[i],right_box[i+1],(255,0,0),5)'''
 
     #############################################################################
 
@@ -195,7 +158,7 @@ while True:
     ####################### path planning   #####################################
     #############################################################################
 
-     #############################################################################
+    #############################################################################
     
     lines = []
     lines.append((300,500))
@@ -233,40 +196,45 @@ while True:
                 x, y = tuple(np.add((right_box[i]), (left_box[i])))
                 x = x//2
                 y = y//2
-                cv2.circle(transf,(int(x), int(y)), 5, (255,0,255), -1) 	# Filled
+                #cv2.circle(transf,(int(x), int(y)), 5, (255,0,255), -1) 	# Filled
                 lines.append( (int(x), int(y)) )
 
-        '''if(len(left_box) > len(right_box)):
-            i = len(right_box) + 1
-            while(i != len(left_box)):
-                x, y = left_box[i]
-                x = x + mid_c
-                lines.append( (int(x), int(y)) )
-                i = i + 1
-                transf = cv2.line(transf,(0,0),lines[-1],(255,0,0),5)
+    return left_box, right_box, lines
 
-        elif( len(left_box) < len(right_box) ):
-            i = len(left_box) + 1
-            print('i am in')
-            while(i != len(right_box)):
-                x, y = right_box[i]
-                x = x - mid_c
-                lines.append( (int(x), int(y)) )
-                i = i + 1
-                transf = cv2.line(transf,(0,0),lines[-1],(255,0,0),5)'''
-
+def pathbana(lines, inv_image):
     for i in range(len(lines) - 1):
         #cv2.circle(transf,lines[0], 5, (255,255,0), -1) 	# Filled
         #print( 'test4' )
-        dst2 = cv2.line(dst2,lines[i],lines[i+1],(255,255,0),5)
-        transf = cv2.line(transf,lines[i],lines[i+1],(255,255,0),5)        
-
+        inv_image = cv2.line(inv_image,lines[i],lines[i+1],(255,255,0),5)
+    if(angle(lines[0], lines[1]) > 75 or angle(lines[0], lines[1]) < -75):
+        lines.remove(1)
+	
     print( lines[0], lines[1] , angle(lines[0], lines[1]) )
 
+    return inv_image
 
-    cv2.imshow('image',img_res)
-    cv2.imshow('transform', dst2)
-    cv2.imshow('coordinates', transf)
+
+while True:
+    _, frame = cap.read()
+    #frame = cv2.imread('coneimg.png')
+
+    bounding_rects, box_image = coneDetect(frame)
+
+    inv_image, M = inv_map(box_image)
+
+    mybox = inv_coor(bounding_rects, M)
+
+    for i in range(len(mybox)):
+        cv2.circle(inv_image, mybox[i], 5, (0,0,255), -1) 	# Filled
+
+    left_box, right_box, lines = pathplan(mybox)
+    #transf = np.zeros([450, 600, 3])
+
+    inv_image = pathbana(lines, inv_image)
+
+
+    cv2.imshow('image',box_image)
+    cv2.imshow('transform', inv_image)
 
     # clear lists
     mybox.clear()
