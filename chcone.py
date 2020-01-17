@@ -6,10 +6,10 @@ path = "http://192.168.43.156:4747/video"
 cap = cv2.VideoCapture('video.mp4')
 
 # Laptop camera 
-#pt = [(0,100), (-900,450), (600,100), (1500,450)]
+pt = [(0,100), (-900,450), (600,100), (1500,450)]
 
 # intel camera 
-pt = [(0,225), (-1500,500), (600,225), (2100,500)]
+#pt = [(0,225), (-1500,500), (600,225), (2100,500)]
 
 def angle(p1, p2):
     x, y = p1
@@ -128,16 +128,27 @@ def inv_map(frame):
     pts2 = np.float32([[0,0],[0,450],[600,0],[600,450]])
     M = cv2.getPerspectiveTransform(pts1,pts2)
     image = cv2.warpPerspective(frame,M,(600,450), flags=cv2.INTER_LINEAR)
+    #cv2.imshow('itshouldlookfine!', image)
     return image, M
 
 def inv_coor(bounding_rects, M):
     mybox = []
-    for rect in bounding_rects:
-        a = np.array([[(rect[0] + rect[2]//2), (rect[1] + rect[3])]], dtype='float32')
+    for detection in bounding_rects:
+
+        xmax = detection[0]
+        xmin = detection[1]
+        ymax = detection[2]
+        ymin = detection[3]
+        #print( ((xmax+xmin)//2), (ymax) )
+        #pt1 = (xmin, ymin)
+        #pt2 = (xmax, ymax)
+    #for rect in bounding_rects:
+        a = np.array([[( (xmax+xmin)//2 ), (ymax//1)]], dtype='float32')
         a = np.array([a])
         pointsOut = cv2.perspectiveTransform(a, M)
         box = pointsOut[0][0][0], pointsOut[0][0][1]
         mybox.append(box)
+        print(pointsOut)
     return mybox
 
 def pathplan(mybox):
@@ -213,42 +224,43 @@ def pathbana(lines, inv_image):
 
     return inv_image
 
+'''def runn():
+	while True:
+	    _, frame = cap.read()
+	    #frame = cv2.imread('coneimg.png')
 
-while True:
-    _, frame = cap.read()
-    #frame = cv2.imread('coneimg.png')
+	    bounding_rects, box_image = coneDetect(frame)
 
-    bounding_rects, box_image = coneDetect(frame)
+	    inv_image, M = inv_map(box_image)
 
-    inv_image, M = inv_map(box_image)
+	    mybox = inv_coor(bounding_rects, M)
 
-    mybox = inv_coor(bounding_rects, M)
+	    for i in range(len(mybox)):
+		cv2.circle(inv_image, mybox[i], 5, (0,0,255), -1) 	# Filled
 
-    for i in range(len(mybox)):
-        cv2.circle(inv_image, mybox[i], 5, (0,0,255), -1) 	# Filled
+	    left_box, right_box, lines = pathplan(mybox)
+	    #transf = np.zeros([450, 600, 3])
 
-    left_box, right_box, lines = pathplan(mybox)
-    #transf = np.zeros([450, 600, 3])
-
-    inv_image = pathbana(lines, inv_image)
+	    inv_image = pathbana(lines, inv_image)
 
 
-    cv2.imshow('image',box_image)
-    cv2.imshow('transform', inv_image)
+	    cv2.imshow('image',box_image)
+	    cv2.imshow('transform', inv_image)
 
-    # clear lists
-    mybox.clear()
-    left_box.clear()
-    right_box.clear()
-    lines.clear()
+	    # clear lists
+	    mybox.clear()
+	    left_box.clear()
+	    right_box.clear()
+	    lines.clear()
 
-    #############################################################################
+	    #############################################################################
 
-    key = cv2.waitKey(50)
-    if key == 27:
-        break
+	    key = cv2.waitKey(50)
+	    if key == 27:
+		break
 
-## Close and exit
-cap.release()
-#out.release()
-cv2.destroyAllWindows()
+	## Close and exit
+	cap.release()
+	#out.release()
+	cv2.destroyAllWindows()'''
+
