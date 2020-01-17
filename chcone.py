@@ -6,7 +6,7 @@ path = "http://192.168.43.156:4747/video"
 cap = cv2.VideoCapture('video.mp4')
 
 # Laptop camera 
-pt = [(0,100), (-900,450), (600,100), (1500,450)]
+pt = [(0,100), (-600,416), (416,100), (1016,416)]
 
 # intel camera 
 #pt = [(0,225), (-1500,500), (600,225), (2100,500)]
@@ -24,7 +24,7 @@ def angle(p1, p2):
     return -1*(90 + angle)
 
 def coneDetect(frame):
-    frame = cv2.resize(frame, (600, 450))
+    frame = cv2.resize(frame, (416, 416))
     img_HSV = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
     img_thresh_low = cv2.inRange(img_HSV, np.array([0, 135, 135]),np.array([15, 255, 255]))  # everything that is included in the "left red"
 
@@ -125,13 +125,13 @@ def coneDetect(frame):
 
 def inv_map(frame):
     pts1 = np.float32([pt[0],pt[1],pt[2],pt[3]])
-    pts2 = np.float32([[0,0],[0,450],[600,0],[600,450]])
+    pts2 = np.float32([[0,0],[0,416],[416,0],[416,416]])
     M = cv2.getPerspectiveTransform(pts1,pts2)
-    image = cv2.warpPerspective(frame,M,(600,450), flags=cv2.INTER_LINEAR)
+    image = cv2.warpPerspective(frame,M,(416,416), flags=cv2.INTER_LINEAR)
     #cv2.imshow('itshouldlookfine!', image)
     return image, M
 
-def inv_coor(bounding_rects, M):
+def inv_coor(bounding_rects, M, image):
     mybox = []
     for detection in bounding_rects:
 
@@ -140,16 +140,18 @@ def inv_coor(bounding_rects, M):
         ymax = detection[2]
         ymin = detection[3]
         #print( ((xmax+xmin)//2), (ymax) )
-        #pt1 = (xmin, ymin)
-        #pt2 = (xmax, ymax)
+        pt1 = (int(xmin), int(ymin))
+        pt2 = (int(xmax), int(ymax))
+        cv2.circle(image,pt1, 5, (255,255,255), -1)
+        cv2.circle(image,pt2, 5, (255,255,255), -1)
     #for rect in bounding_rects:
         a = np.array([[( (xmax+xmin)//2 ), (ymax//1)]], dtype='float32')
         a = np.array([a])
         pointsOut = cv2.perspectiveTransform(a, M)
         box = pointsOut[0][0][0], pointsOut[0][0][1]
         mybox.append(box)
-        print(pointsOut)
-    return mybox
+        #print(pointsOut)
+    return mybox, image
 
 def pathplan(mybox):
     left_box = []
@@ -157,7 +159,7 @@ def pathplan(mybox):
 
     for i in range(len(mybox)):
         x, y = mybox[i]
-        if(x < 300):
+        if(x < 208):
             left_box.append(mybox[i])
         else:
             right_box.append(mybox[i])
@@ -172,12 +174,12 @@ def pathplan(mybox):
     #############################################################################
     
     lines = []
-    lines.append((300,500))
+    lines.append((208,450))
 
     mid_c = 100
 
     if( len(left_box) == 0 and len(right_box) == 0 ):
-        lines.append((300,400))
+        lines.append((208,350))
          
     elif( len(left_box) == 0 and len(right_box) != 0 ):
         for i in range(len(right_box)):
@@ -223,44 +225,3 @@ def pathbana(lines, inv_image):
     print( lines[0], lines[1] , angle(lines[0], lines[1]) )
 
     return inv_image
-
-'''def runn():
-	while True:
-	    _, frame = cap.read()
-	    #frame = cv2.imread('coneimg.png')
-
-	    bounding_rects, box_image = coneDetect(frame)
-
-	    inv_image, M = inv_map(box_image)
-
-	    mybox = inv_coor(bounding_rects, M)
-
-	    for i in range(len(mybox)):
-		cv2.circle(inv_image, mybox[i], 5, (0,0,255), -1) 	# Filled
-
-	    left_box, right_box, lines = pathplan(mybox)
-	    #transf = np.zeros([450, 600, 3])
-
-	    inv_image = pathbana(lines, inv_image)
-
-
-	    cv2.imshow('image',box_image)
-	    cv2.imshow('transform', inv_image)
-
-	    # clear lists
-	    mybox.clear()
-	    left_box.clear()
-	    right_box.clear()
-	    lines.clear()
-
-	    #############################################################################
-
-	    key = cv2.waitKey(50)
-	    if key == 27:
-		break
-
-	## Close and exit
-	cap.release()
-	#out.release()
-	cv2.destroyAllWindows()'''
-

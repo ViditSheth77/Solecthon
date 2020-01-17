@@ -26,6 +26,7 @@ def cvDrawBoxes(detections, img):
             float(x), float(y), float(w), float(h))
         pt1 = (xmin, ymin)
         pt2 = (xmax, ymax)
+        cv2.circle(img,pt1, 5, (255,255,255), -1)
         cv2.rectangle(img, pt1, pt2, (0, 255, 0), 1)
         cv2.putText(img,
                     detection[0].decode() +
@@ -33,6 +34,29 @@ def cvDrawBoxes(detections, img):
                     (pt1[0], pt1[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                     [0, 255, 0], 2)
     return img
+    
+    
+def get_inv_coor(detections, img, M):
+    mybox = []
+    for detection in detections:
+        x, y, w, h = detection[2][0],\
+            detection[2][1],\
+            detection[2][2],\
+            detection[2][3]
+        xmin, ymin, xmax, ymax = convertBack(
+            float(x), float(y), float(w), float(h))
+        pt1 = (xmin, ymin)
+        pt2 = (xmax, ymax)
+        cv2.circle(img,pt1, 5, (255,255,255), -1)
+        a = np.array([[( (xmax+xmin)//2 ), (ymax//1)]], dtype='float32')
+        a = np.array([a])
+        pointsOut = cv2.perspectiveTransform(a, M)
+        box = pointsOut[0][0][0], pointsOut[0][0][1]
+        mybox.append(box)
+        
+        
+    return mybox, img
+
 
 
 netMain = None
@@ -100,19 +124,22 @@ def YOLO():
                                    (darknet.network_width(netMain),
                                     darknet.network_height(netMain)),
                                    interpolation=cv2.INTER_LINEAR)
-
         darknet.copy_image_from_bytes(darknet_image,frame_resized.tobytes())
 
         detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)
         image = cvDrawBoxes(detections, frame_resized)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         print(1/(time.time()-prev_time))
-        image = cv2.resize(image, (600, 450))
+
+        #aaapna
         inv_image, M = chcone.inv_map(image)
         bounding_rects = []
+        
         for i in range(len(detections)):
             bounding_rects.append(detections[i][2])
-        mybox = chcone.inv_coor(bounding_rects, M)
+            
+        mybox, image = get_inv_coor(detections, image, M)
+        
         for i in range(len(mybox)):
             cv2.circle(inv_image, mybox[i], 5, (0,0,255), -1)   # Filled
 
