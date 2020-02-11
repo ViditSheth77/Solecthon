@@ -6,10 +6,12 @@ path = "http://192.168.43.156:4747/video"
 cap = cv2.VideoCapture('video.mp4')
 
 # Laptop camera 
-pt = [(0,100), (-600,416), (416,100), (1016,416)]
+pt = [(0,25), (-600,340), (416,25), (1016,340)]
 
 # intel camera 
 #pt = [(0,225), (-1500,500), (600,225), (2100,500)]
+
+car_coor = (208,450)
 
 def angle(p1, p2):
     x, y = p1
@@ -20,8 +22,8 @@ def angle(p1, p2):
         slope = 99999
     angle = np.arctan(slope)*180/math.pi
     if(angle > 0):
-        return(90 - angle)
-    return -1*(90 + angle)
+        return -1*(90 - angle)
+    return (90 + angle)
 
 def coneDetect(frame):
     frame = cv2.resize(frame, (416, 416))
@@ -151,32 +153,46 @@ def inv_coor(bounding_rects, M, image):
         box = pointsOut[0][0][0], pointsOut[0][0][1]
         mybox.append(box)
         #print(pointsOut)
-    return mybox, image
+    #mybox = sorted(mybox, key=lambda k:(k[1], k[0])).copy()
+    #mybox.reverse()
+    #abc = sorted(mybox, key=last)
+    print('boxall', mybox)
+    return mybox , image
 
 def pathplan(mybox):
     left_box = []
     right_box = []
+    left_count = 5
+    right_count = 5
 
     for i in range(len(mybox)):
         x, y = mybox[i]
         if(x < 208):
-            left_box.append(mybox[i])
+            if(left_count > 0):
+                left_box.append(mybox[i])
+                left_count = left_count - 1
+
         else:
-            right_box.append(mybox[i])
+            if(right_count > 0):
+                right_box.append(mybox[i])
+                right_count = right_count - 1
 
-
+	
     #############################################################################
-
+    left_box.sort(reverse = True)
+    right_box.sort(reverse = True)
+    '''left_box.sort()
+    right_box.sort()'''
     #############################################################################
-    ####################### path planning   #####################################
+    ############################### path planning ###############################
     #############################################################################
 
     #############################################################################
     
     lines = []
-    lines.append((208,450))
+    lines.append(car_coor)
 
-    mid_c = 100
+    mid_c = 75
 
     if( len(left_box) == 0 and len(right_box) == 0 ):
         lines.append((208,350))
@@ -212,16 +228,22 @@ def pathplan(mybox):
                 #cv2.circle(transf,(int(x), int(y)), 5, (255,0,255), -1) 	# Filled
                 lines.append( (int(x), int(y)) )
 
-    return left_box, right_box, lines
+    left_box =  sorted(left_box, key=lambda k:(k[1], k[0])).copy()
+    right_box = sorted(right_box, key=lambda l:(l[1], l[0])).copy()
+    lines = sorted(lines, key=lambda m:(m[1], m[0])).copy()
+    #print('left', left_box)
+    #print(len(left_box), len(right_box))
+
+    return left_box[::-1], right_box[::-1], lines[::-1]
 
 def pathbana(lines, inv_image):
     for i in range(len(lines) - 1):
-        #cv2.circle(transf,lines[0], 5, (255,255,0), -1) 	# Filled
+        cv2.circle(inv_image,lines[i], 5, (0,0,0), -1) 	# Filled
         #print( 'test4' )
-        inv_image = cv2.line(inv_image,lines[i],lines[i+1],(255,255,0),5)
+        inv_image = cv2.line(inv_image,lines[i],lines[i+1],(255,255,0),4)
     if(angle(lines[0], lines[1]) > 75 or angle(lines[0], lines[1]) < -75):
         lines.remove(1)
 	
-    print( lines[0], lines[1] , angle(lines[0], lines[1]) )
+    #print( lines[0], lines[1] , angle(lines[0], lines[1]) )
 
     return inv_image
