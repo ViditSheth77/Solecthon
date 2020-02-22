@@ -6,7 +6,7 @@ path = "http://192.168.43.156:4747/video"
 cap = cv2.VideoCapture('video.mp4')
 
 # Laptop camera 
-pt = [(0,25), (-600,340), (416,25), (1016,340)]
+pt = [(0,100), (-600,340), (416,100), (1016,340)]
 
 # intel camera 
 #pt = [(0,225), (-1500,500), (600,225), (2100,500)]
@@ -192,7 +192,7 @@ def pathplan(mybox):
     lines = []
     lines.append(car_coor)
 
-    mid_c = 75
+    mid_c = 50
 
     if( len(left_box) == 0 and len(right_box) == 0 ):
         lines.append((208,350))
@@ -241,8 +241,8 @@ def pathbana(lines, inv_image):
         cv2.circle(inv_image,lines[i], 5, (0,0,0), -1) 	# Filled
         #print( 'test4' )
         inv_image = cv2.line(inv_image,lines[i],lines[i+1],(255,255,0),4)
-    if(angle(lines[0], lines[1]) > 75 or angle(lines[0], lines[1]) < -75):
-        lines.remove(1)
+    '''if(angle(lines[0], lines[1]) > 75 or angle(lines[0], lines[1]) < -75):
+        lines.remove(1)'''
 	
     #print( lines[0], lines[1] , angle(lines[0], lines[1]) )
 
