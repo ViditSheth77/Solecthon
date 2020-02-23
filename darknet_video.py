@@ -24,11 +24,19 @@ j = range(45,60)
 k = range(60,75)
 l = range(75,90)
 
-#s = serial.Serial('/dev/ttyACM0', 9600)
+m = range(-90,-30)
+n = range(-30,-12)
+o = range(-12,0)
+p = range(0,12)
+q = range(12,30)
+r = range(30,90)
+
+s = serial.Serial('/dev/ttyACM0', 115200)
+time.sleep(2)
 
 
 def steer(angle):
-    if( angle in a ):
+    '''if( angle in a ):
         return '0'
     elif( angle in b ):
         return '1'
@@ -52,8 +60,19 @@ def steer(angle):
         return '8'
     elif( angle in l):
         return '9'
-    else:
-        print("OUT OF ANGLE!!!")
+    '''
+    if( angle in m ):
+        return '0'
+    elif( angle in n ):
+        return '1'
+    elif( angle in o or angle in p):
+        return '2'
+    elif( angle in q):
+        return '3'
+    elif( angle in r):
+        return '4'
+    '''else:
+        print("OUT OF ANGLE!!!")'''
 
 def personDistance(person_coor):
 	p_x, p_y = person_coor
@@ -168,8 +187,8 @@ def YOLO():
             pass
     path = 'http://192.168.43.156:4747/video'
     #cap = cv2.VideoCapture(path)
-    #cap = cv2.VideoCapture(0)
-    cap = cv2.VideoCapture("teat2.mp4")
+    cap = cv2.VideoCapture(0)
+    #cap = cv2.VideoCapture('video143.mp4')
     cap.set(3, 1280)
     cap.set(4, 720)
     out = cv2.VideoWriter(
@@ -180,103 +199,122 @@ def YOLO():
     # Create an image we reuse for each detect
     darknet_image = darknet.make_image(darknet.network_width(netMain),
                                     darknet.network_height(netMain),3)
-    while True:
-        prev_time = time.time()
-        ret, frame_read = cap.read()
-        frame_rgb = cv2.cvtColor(frame_read, cv2.COLOR_BGR2RGB)
-        frame_resized = cv2.resize(frame_rgb,
-                                   (darknet.network_width(netMain),
-                                    darknet.network_height(netMain)),
-                                   interpolation=cv2.INTER_LINEAR)
-        darknet.copy_image_from_bytes(darknet_image,frame_resized.tobytes())
+        
+    s.write(str.encode('a'))
 
-        detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)
-        image = cvDrawBoxes(detections, frame_resized)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        #print(1/(time.time()-prev_time))
+    while cap.isOpened():
+                
+        try:
 
-        ######################################################
-        #############   AAPNA CODE  ##########################
-        ######################################################
+            sterring = '2'
+            prev_time = time.time()
+            ret, frame_read = cap.read()
+            frame_rgb = cv2.cvtColor(frame_read, cv2.COLOR_BGR2RGB)
+            frame_resized = cv2.resize(frame_rgb,
+                                       (darknet.network_width(netMain),
+                                        darknet.network_height(netMain)),
+                                       interpolation=cv2.INTER_LINEAR)
+            darknet.copy_image_from_bytes(darknet_image,frame_resized.tobytes())
 
-        # simple inv transform
-        inv_image, M = chcone.inv_map(image)
+            detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)
+            image = cvDrawBoxes(detections, frame_resized)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            #print(1/(time.time()-prev_time))
+
+            ######################################################
+            #############   AAPNA CODE  ##########################
+            ######################################################
+
+            # simple inv transform
+            inv_image, M = chcone.inv_map(image)
+                
+            # getting inv coordinates on person and cone
+            person, mybox, image = get_inv_coor(detections, image, M)
+
+            # alert in case of threat
+            if(len(person) != 0):
+            	for human in person:
+            		cv2.circle(inv_image, human, 5, (0,0,255), -1)
+            		distance = personDistance(human)
+            		'''if(distance <= DANGER):
+            			print("U wanna Die?")
+            		else:
+            			print("hatt be")'''
             
-        # getting inv coordinates on person and cone
-        person, mybox, image = get_inv_coor(detections, image, M)
 
-        # alert in case of threat
-        if(len(person) != 0):
-        	for human in person:
-        		cv2.circle(inv_image, human, 5, (0,0,255), -1)
-        		distance = personDistance(human)
-        		if(distance <= DANGER):
-        			print("U wanna Die?")
-        		else:
-        			print("hatt be")
+            left_box, right_box, lines = chcone.pathplan(mybox)
+            #print(left_box, '\n')
+            #print(right_box,'\n')
+            #print(lines,'\n\n\n')
+
+
+
+            ######################################################
+            ############### DRAWING ONLY    ######################
+            ######################################################
+
+            for i in range(len(mybox)):
+                cv2.circle(inv_image, mybox[i], 5, (0,255,255), -1)   # Filled
+
+            for i in range(len(left_box)-1):
+                cv2.line(inv_image, left_box[i], left_box[i+1], (125, 125, 255), 3)
+
+            for i in range(len(right_box)-1):
+                cv2.line(inv_image, right_box[i], right_box[i+1], (0,0,0), 3)
+
+            ######################################################
+            ######################################################
+
+
+
+
+            # encode signal for steering control
+            try:
+            	angle = chcone.angle(lines[0], lines[1])
+            except:
+            	angle = chcone.angle(lines[0], lines[1])
+            angle = math.floor(angle)
+            angle_a = steer(angle)
+            print(angle)
+            if(sterring != angle_a):
+                s.write(str.encode(angle_a))
+                
+            #print(angle)
+            steering = angle_a
+
+            # JUST DRAWING
+            inv_image = chcone.pathbana(lines, inv_image)
+            cv2.circle(image,chcone.pt[0], 5, (255,255,255), -1)
+            cv2.circle(image,chcone.pt[1], 5, (255,255,255), -1)
+            cv2.circle(image,chcone.pt[2], 5, (255,255,255), -1)
+            cv2.circle(image,chcone.pt[3], 5, (255,255,255), -1)
+            image = cv2.resize(image, (800, 800))
+            cv2.imshow('image', image)
+            
+            cv2.circle(inv_image, chcone.car_coor, DANGER, (0,0,225), 2)
+            h, w, c = inv_image.shape
+            #draws center line
+            #cv2.line(inv_image, (w//2,0), (w//2,h),(255,0,0),5)
+            inv_image = cv2.resize(inv_image, (800, 800))    
+
+            cv2.imshow('transform', inv_image)
         
+                # clear lists
+            mybox.clear()
+            left_box.clear()
+            right_box.clear()
+            lines.clear()
+            
+    	
+            cv2.waitKey(3)
 
-        left_box, right_box, lines = chcone.pathplan(mybox)
-        #print(left_box, '\n')
-        #print(right_box,'\n')
-        #print(lines,'\n\n\n')
-
-
-
-        ######################################################
-        ############### DRAWING ONLY    ######################
-        ######################################################
-
-        for i in range(len(mybox)):
-            cv2.circle(inv_image, mybox[i], 5, (0,255,255), -1)   # Filled
-
-        for i in range(len(left_box)-1):
-            cv2.line(inv_image, left_box[i], left_box[i+1], (125, 125, 255), 3)
-
-        for i in range(len(right_box)-1):
-            cv2.line(inv_image, right_box[i], right_box[i+1], (0,0,0), 3)
-
-        ######################################################
-        ######################################################
-
-
-
-
-        # encode signal for steering control
-        angle = chcone.angle(lines[0], lines[1])
-        angle = math.floor(angle)
-        angle = steer(angle)
-        print(angle)
-        #s.write(str.encode(angle))
-
-        # JUST DRAWING
-        inv_image = chcone.pathbana(lines, inv_image)
-        cv2.circle(image,chcone.pt[0], 5, (255,255,255), -1)
-        cv2.circle(image,chcone.pt[1], 5, (255,255,255), -1)
-        cv2.circle(image,chcone.pt[2], 5, (255,255,255), -1)
-        cv2.circle(image,chcone.pt[3], 5, (255,255,255), -1)
-        image = cv2.resize(image, (800, 800))
-        cv2.imshow('image', image)
-        
-        cv2.circle(inv_image, chcone.car_coor, DANGER, (0,0,225), 2)
-        h, w, c = inv_image.shape
-        #draws center line
-        #cv2.line(inv_image, (w//2,0), (w//2,h),(255,0,0),5)
-        inv_image = cv2.resize(inv_image, (800, 800))    
-
-        cv2.imshow('transform', inv_image)
-    
-            # clear lists
-        mybox.clear()
-        left_box.clear()
-        right_box.clear()
-        lines.clear()
-        
-
-        cv2.waitKey(10)
+        except:
+            
+            print('Exception aaya hai!!!!')
+            s.write(str.encode('c'))
+            break
     cap.release()
     out.release()
-    #s.write(str.encode('s'))
 
 if __name__ == "__main__":
     YOLO()
