@@ -187,7 +187,7 @@ def YOLO():
             pass
     path = 'http://192.168.43.156:4747/video'
     #cap = cv2.VideoCapture(path)
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(2)
     #cap = cv2.VideoCapture('video143.mp4')
     cap.set(3, 1280)
     cap.set(4, 720)
@@ -201,6 +201,8 @@ def YOLO():
                                     darknet.network_height(netMain),3)
         
     s.write(str.encode('a'))
+    
+    counter = 0
 
     while cap.isOpened():
                 
@@ -246,6 +248,11 @@ def YOLO():
             #print(left_box, '\n')
             #print(right_box,'\n')
             #print(lines,'\n\n\n')
+            if len(mybox) == 0:
+                counter = counter + 1
+                if counter == 50:
+                    s.write(str.encode('c'))
+                    counter = 0
 
 
 
@@ -278,9 +285,7 @@ def YOLO():
             print(angle)
             if(sterring != angle_a):
                 s.write(str.encode(angle_a))
-                
-            #print(angle)
-            steering = angle_a
+                steering = angle_a
 
             # JUST DRAWING
             inv_image = chcone.pathbana(lines, inv_image)
@@ -308,8 +313,8 @@ def YOLO():
     	
             cv2.waitKey(3)
 
-        except:
-            
+        except Exception as e:
+            print(e)
             print('Exception aaya hai!!!!')
             s.write(str.encode('c'))
             break

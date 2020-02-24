@@ -207,11 +207,11 @@ void loop() {
         break;*/
 
       case '0':
-        moveToPosition(-40 * G * R);
+        moveToPosition(-60 * G * R);
         break;
 
       case '1':
-        moveToPosition( -30 * G * R );
+        moveToPosition( -20 * G * R );
         break;
 
       case '2':
@@ -219,11 +219,11 @@ void loop() {
         break;
 
       case '3':
-        moveToPosition( 30 * G * R );
+        moveToPosition( 20 * G * R );
         break;
 
       case '4':
-        moveToPosition( 40 * G * R );
+        moveToPosition( 60 * G * R );
         break;
 
       case 'a':
