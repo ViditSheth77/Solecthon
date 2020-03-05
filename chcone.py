@@ -7,7 +7,7 @@ cap = cv2.VideoCapture('video.mp4')
 
 # Laptop camera 
 pt = [(0,100), (-600,340), (416,100), (1016,340)]
-
+LIMIT_CONE = 230
 # intel camera 
 #pt = [(0,225), (-1500,500), (600,225), (2100,500)]
 
@@ -181,12 +181,25 @@ def pathplan(mybox):
     #############################################################################
     left_box.sort(reverse = True)
     right_box.sort(reverse = True)
+
+    left_box =  sorted(left_box, key=lambda k:(k[1], k[0])).copy()
+    right_box = sorted(right_box, key=lambda l:(l[1], l[0])).copy()
     '''left_box.sort()
     right_box.sort()'''
     #############################################################################
     ############################### path planning ###############################
     #############################################################################
-
+    try:
+        if(left_box[-1][1] < LIMIT_CONE):
+            left_box.clear()
+    except:
+        print('Left Exception in pathplan function.............')
+            
+    try:
+        if(right_box[-1][1] < LIMIT_CONE):
+            right_box.clear()
+    except:
+        print('Right Exception in pathplan function.............')
     #############################################################################
     
     lines = []
@@ -228,12 +241,9 @@ def pathplan(mybox):
                 #cv2.circle(transf,(int(x), int(y)), 5, (255,0,255), -1) 	# Filled
                 lines.append( (int(x), int(y)) )
 
-    left_box =  sorted(left_box, key=lambda k:(k[1], k[0])).copy()
-    right_box = sorted(right_box, key=lambda l:(l[1], l[0])).copy()
     lines = sorted(lines, key=lambda m:(m[1], m[0])).copy()
-    #print('left', left_box)
     #print(len(left_box), len(right_box))
-
+    
     return left_box[::-1], right_box[::-1], lines[::-1]
 
 def pathbana(lines, inv_image):

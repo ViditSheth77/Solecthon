@@ -32,7 +32,7 @@ q = range(12,30)
 r = range(30,90)
 
 s = serial.Serial('/dev/ttyACM0', 115200)
-time.sleep(2)
+time.sleep(1.5)
 
 
 def steer(angle):
@@ -71,6 +71,7 @@ def steer(angle):
         return '3'
     elif( angle in r):
         return '4'
+    return '2'
     '''else:
         print("OUT OF ANGLE!!!")'''
 
@@ -187,7 +188,7 @@ def YOLO():
             pass
     path = 'http://192.168.43.156:4747/video'
     #cap = cv2.VideoCapture(path)
-    cap = cv2.VideoCapture(2)
+    cap = cv2.VideoCapture(3)
     #cap = cv2.VideoCapture('video143.mp4')
     cap.set(3, 1280)
     cap.set(4, 720)
@@ -200,15 +201,13 @@ def YOLO():
     darknet_image = darknet.make_image(darknet.network_width(netMain),
                                     darknet.network_height(netMain),3)
         
-    s.write(str.encode('a'))
+    #s.write(str.encode('a'))
     
     counter = 0
+    sterring = '2'
 
     while cap.isOpened():
-                
         try:
-
-            sterring = '2'
             prev_time = time.time()
             ret, frame_read = cap.read()
             frame_rgb = cv2.cvtColor(frame_read, cv2.COLOR_BGR2RGB)
@@ -250,7 +249,7 @@ def YOLO():
             #print(lines,'\n\n\n')
             if len(mybox) == 0:
                 counter = counter + 1
-                if counter == 50:
+                if counter == 27:
                     s.write(str.encode('c'))
                     counter = 0
 
@@ -300,6 +299,8 @@ def YOLO():
             h, w, c = inv_image.shape
             #draws center line
             #cv2.line(inv_image, (w//2,0), (w//2,h),(255,0,0),5)
+            cv2.line(inv_image, (0, chcone.LIMIT_CONE), (416, chcone.LIMIT_CONE), (0,0,255), 1)
+
             inv_image = cv2.resize(inv_image, (800, 800))    
 
             cv2.imshow('transform', inv_image)
@@ -312,7 +313,6 @@ def YOLO():
             
     	
             cv2.waitKey(3)
-
         except Exception as e:
             print(e)
             print('Exception aaya hai!!!!')
@@ -320,6 +320,5 @@ def YOLO():
             break
     cap.release()
     out.release()
-
 if __name__ == "__main__":
     YOLO()

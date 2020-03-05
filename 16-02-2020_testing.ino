@@ -2,15 +2,17 @@
 #define STEP_PIN         2       // MOTOR PINS
 #define ENABLE_PIN       4
 
-#define ADIR_PIN          8
-#define ASTEP_PIN         9      //ACTUATOR
-#define AENABLE_PIN       10
+#define ADIR_PIN          5//8
+#define ASTEP_PIN         6//9      //ACTUATOR
+#define AENABLE_PIN       7//10
 
 #define TIMER1_INTERRUPTS_ON    TIMSK1 |=  (1 << OCIE1A);
 #define TIMER1_INTERRUPTS_OFF   TIMSK1 &= ~(1 << OCIE1A);
 
 #define G 5.18*3.5
 #define R -5/9
+
+void (* resetFunc) (void) = 0;
 
 //#define PIN_SWITCH_1     13
 int t;
@@ -207,11 +209,11 @@ void loop() {
         break;*/
 
       case '0':
-        moveToPosition(-60 * G * R);
+        moveToPosition(-40 * G * R);
         break;
 
       case '1':
-        moveToPosition( -20 * G * R );
+        moveToPosition( -22 * G * R );
         break;
 
       case '2':
@@ -219,11 +221,11 @@ void loop() {
         break;
 
       case '3':
-        moveToPosition( 20 * G * R );
+        moveToPosition( 22 * G * R );
         break;
 
       case '4':
-        moveToPosition( 60 * G * R );
+        moveToPosition( 40 * G * R );
         break;
 
       case 'a':
@@ -232,23 +234,41 @@ void loop() {
         break;
 
       case 'b':
-        act = 1;
         digitalWrite(11, 0);
-        digitalWrite(AENABLE_PIN, HIGH);
-        t = 3000;
-        while (t--) {
-          digitalWrite(ASTEP_PIN, 1);
-          delay(100);
-          digitalWrite(ASTEP_PIN, 0);
-          delay(100);
-        }
-        //while (1) {}
+        digitalWrite(AENABLE_PIN, LOW);
+        
         break;
 
       case 'c':
         analogWrite(11, 0);
         digitalWrite(AENABLE_PIN, LOW);
+        act = 1;
+        moveToPosition(0);
+        maxSpeed = 150;
+        digitalWrite(AENABLE_PIN, HIGH);
+        moveToPosition(2500);
+        delay(500);
+        moveToPosition(0);
+        digitalWrite(AENABLE_PIN, LOW);
+        act = 0;
+
         break;
+
+      case 'r':
+        resetFunc();
+        break;
+
+      case 's':
+        digitalWrite(ENABLE_PIN, LOW);
+        digitalWrite(AENABLE_PIN, HIGH);
+        act = 0;
+        moveToPosition(0);
+        act = 1;
+        moveToPosition(2900);
+        act = 0;
+        moveToPosition(0);
+        digitalWrite(AENABLE_PIN, LOW);
+
 
     }
     digitalWrite(ENABLE_PIN, 0);
