@@ -31,7 +31,7 @@ p = range(0,12)
 q = range(12,30)
 r = range(30,90)
 
-s = serial.Serial('/dev/ttyACM0', 115200)
+s = serial.Serial('/dev/ttyACM1', 115200)
 time.sleep(1.5)
 
 
@@ -133,8 +133,7 @@ def get_inv_coor(detections, img, M):
         elif(box[1]>0):
         	mybox.append(box)
     
-    sorted(mybox, key=lambda k:(k[1], k[0]))
-
+    mybox = sorted(mybox, key=lambda k:(k[1], k[0])).copy()
     #print(mybox[::-1],'\n')
 
     return person, mybox[::-1], img
@@ -189,7 +188,7 @@ def YOLO():
     path = 'http://192.168.43.156:4747/video'
     #cap = cv2.VideoCapture(path)
     cap = cv2.VideoCapture(3)
-    #cap = cv2.VideoCapture('video143.mp4')
+    cap = cv2.VideoCapture('video143.mp4')
     cap.set(3, 1280)
     cap.set(4, 720)
     out = cv2.VideoWriter(
@@ -202,9 +201,9 @@ def YOLO():
                                     darknet.network_height(netMain),3)
         
     #s.write(str.encode('a'))
-    
     counter = 0
-    sterring = '2'
+    steering = '2'
+
 
     while cap.isOpened():
         try:
@@ -228,7 +227,8 @@ def YOLO():
 
             # simple inv transform
             inv_image, M = chcone.inv_map(image)
-                
+            #print(inv_image.shape)
+
             # getting inv coordinates on person and cone
             person, mybox, image = get_inv_coor(detections, image, M)
 
@@ -282,7 +282,7 @@ def YOLO():
             angle = math.floor(angle)
             angle_a = steer(angle)
             print(angle)
-            if(sterring != angle_a):
+            if(steering != angle_a):
                 s.write(str.encode(angle_a))
                 steering = angle_a
 

@@ -6,8 +6,11 @@ path = "http://192.168.43.156:4747/video"
 cap = cv2.VideoCapture('video.mp4')
 
 # Laptop camera 
-pt = [(0,100), (-600,340), (416,100), (1016,340)]
-LIMIT_CONE = 230
+pt = [(0,100), (-600,416), (416,100), (1016,416)]
+
+LIMIT_CONE = 230+10
+
+mid_c = 80
 # intel camera 
 #pt = [(0,225), (-1500,500), (600,225), (2100,500)]
 
@@ -205,7 +208,6 @@ def pathplan(mybox):
     lines = []
     lines.append(car_coor)
 
-    mid_c = 50
 
     if( len(left_box) == 0 and len(right_box) == 0 ):
         lines.append((208,350))
@@ -227,19 +229,23 @@ def pathplan(mybox):
     elif( len(left_box) != 0 and len(right_box) != 0 ):
 
         small_len  = 0
-
+        left_box = left_box[::-1].copy()
+        right_box = right_box[::-1].copy()
         if(len(left_box) > len(right_box)):
             small_len = len(right_box)
         else:
             small_len = len(left_box)
         
-        for i in range(small_len):
+        for i in reversed(range(small_len)):
                 #print( 'test3' )
                 x, y = tuple(np.add((right_box[i]), (left_box[i])))
                 x = x//2
                 y = y//2
                 #cv2.circle(transf,(int(x), int(y)), 5, (255,0,255), -1) 	# Filled
                 lines.append( (int(x), int(y)) )
+
+        left_box = left_box[::-1].copy()
+        right_box = right_box[::-1].copy()
 
     lines = sorted(lines, key=lambda m:(m[1], m[0])).copy()
     #print(len(left_box), len(right_box))
