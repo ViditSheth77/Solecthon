@@ -12,6 +12,12 @@
 #define G 5.18*3.5
 #define R -5/9
 
+void serialFlush(){
+  while(Serial.available() > 0){
+    char t = Serial.read();
+  }
+}
+
 void (* resetFunc) (void) = 0;
 
 //#define PIN_SWITCH_1     13
@@ -158,13 +164,14 @@ void moveToPosition(long p, bool wait = true) {
 }
 
 void loop() {
-  if (Serial.available() > 0) {                  ////////FOR MOTOR
+    if (Serial.available() > 0) {                  ////////FOR MOTOR
     int a = Serial.read();
+    
     Serial.println(a);
     digitalWrite(ENABLE_PIN, 1);
     digitalWrite(AENABLE_PIN, 1);
 
-    maxSpeed = 300;                   ///////////////////FOR MOTOR SPEED
+    maxSpeed = 150;                   ///////////////////FOR MOTOR SPEED
 
     act = 0;                              ///FOR RUNNING MOTOR 0 else 1 in actuator
     switch (a) {
@@ -209,11 +216,12 @@ void loop() {
         break;*/
 
       case '0':
-        moveToPosition(-40 * G * R);
+        moveToPosition(-60 * G * R);
+        delay(500);//to take turn for some time
         break;
 
       case '1':
-        moveToPosition( -22 * G * R );
+        moveToPosition( -25 * G * R );
         break;
 
       case '2':
@@ -221,11 +229,12 @@ void loop() {
         break;
 
       case '3':
-        moveToPosition( 22 * G * R );
+        moveToPosition( 25 * G * R );
         break;
 
       case '4':
-        moveToPosition( 40 * G * R );
+        moveToPosition( 60 * G * R );
+        delay(500);
         break;
 
       case 'a':
@@ -269,9 +278,9 @@ void loop() {
         moveToPosition(0);
         digitalWrite(AENABLE_PIN, LOW);
 
-
     }
     digitalWrite(ENABLE_PIN, 0);
     digitalWrite(AENABLE_PIN, 0);
+    serialFlush();
   }
 }

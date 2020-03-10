@@ -9,6 +9,7 @@ import darknet
 import chcone
 import serial
 
+CAM_NUM = 3
 DANGER = 150
 
 a = range(-90,-75)
@@ -24,14 +25,14 @@ j = range(45,60)
 k = range(60,75)
 l = range(75,90)
 
-m = range(-90,-30)
-n = range(-30,-12)
+m = range(-90,-26)
+n = range(-26,-12)
 o = range(-12,0)
 p = range(0,12)
-q = range(12,30)
-r = range(30,90)
+q = range(12,26)
+r = range(26,90)
 
-s = serial.Serial('/dev/ttyACM1', 115200)
+s = serial.Serial('/dev/ttyACM0', 115200)
 time.sleep(1.5)
 
 
@@ -187,8 +188,8 @@ def YOLO():
             pass
     path = 'http://192.168.43.156:4747/video'
     #cap = cv2.VideoCapture(path)
-    cap = cv2.VideoCapture(3)
-    cap = cv2.VideoCapture('video143.mp4')
+    cap = cv2.VideoCapture(CAM_NUM)
+    #cap = cv2.VideoCapture('test.mp4')
     cap.set(3, 1280)
     cap.set(4, 720)
     out = cv2.VideoWriter(
@@ -203,7 +204,8 @@ def YOLO():
     #s.write(str.encode('a'))
     counter = 0
     steering = '2'
-
+    limit_frames = 5
+    angle_limit = [0]*limit_frames
 
     while cap.isOpened():
         try:
@@ -243,7 +245,7 @@ def YOLO():
             			print("hatt be")'''
             
 
-            left_box, right_box, lines = chcone.pathplan(mybox)
+            left_box, right_box, lines = chcone.pathplan(mybox, steering)
             #print(left_box, '\n')
             #print(right_box,'\n')
             #print(lines,'\n\n\n')
@@ -279,12 +281,20 @@ def YOLO():
             	angle = chcone.angle(lines[0], lines[1])
             except:
             	angle = chcone.angle(lines[0], lines[1])
+
             angle = math.floor(angle)
-            angle_a = steer(angle)
-            print(angle)
+
+            #########################
+            angle_limit.append(angle)
+            del angle_limit[0]
+            #########################
+
+            angle_a = steer( (sum(angle_limit))//limit_frames )
+            print( (sum(angle_limit))//limit_frames )
             if(steering != angle_a):
                 s.write(str.encode(angle_a))
                 steering = angle_a
+                print( 'updated' )
 
             # JUST DRAWING
             inv_image = chcone.pathbana(lines, inv_image)
@@ -301,7 +311,18 @@ def YOLO():
             #cv2.line(inv_image, (w//2,0), (w//2,h),(255,0,0),5)
             cv2.line(inv_image, (0, chcone.LIMIT_CONE), (416, chcone.LIMIT_CONE), (0,0,255), 1)
 
+            if( steering == '2' ):
+                cv2.line(inv_image, (208, 0), (208, 416), (0,225,255), 1)
+
+            elif( steering == '0' or steering == '1' ):
+                cv2.line(inv_image, (104, 0), (208, 416), (0,225,255), 1)
+
+            else:
+                cv2.line(inv_image, (312, 0), (208, 416), (0,225,255), 1)                
+
+
             inv_image = cv2.resize(inv_image, (800, 800))    
+
 
             cv2.imshow('transform', inv_image)
         
@@ -312,7 +333,7 @@ def YOLO():
             lines.clear()
             
     	
-            cv2.waitKey(3)
+            cv2.waitKey(100)
         except Exception as e:
             print(e)
             print('Exception aaya hai!!!!')
