@@ -8,13 +8,13 @@ cap = cv2.VideoCapture('video.mp4')
 # Laptop camera 
 pt = [(0,100), (-600,416), (416,100), (1016,416)]
 
-LIMIT_CONE = 230+10
+LIMIT_CONE = 230+30-30
 
-mid_c = 80
+mid_c = 80-5
 # intel camera 
 #pt = [(0,225), (-1500,500), (600,225), (2100,500)]
 
-car_coor = (208,450)
+car_coor = (208,450-5)
 
 def angle(p1, p2):
     x, y = p1
@@ -162,7 +162,12 @@ def inv_coor(bounding_rects, M, image):
     print('boxall', mybox)
     return mybox , image
 
-def pathplan(mybox):
+def st_line( a, b, c, x, y ):
+    if( a*x + b*y + c < 0 ):
+        return True# True means left side for left turn
+    return False
+
+def pathplan(mybox, str_ang):
     left_box = []
     right_box = []
     left_count = 5
@@ -170,15 +175,39 @@ def pathplan(mybox):
 
     for i in range(len(mybox)):
         x, y = mybox[i]
-        if(x < 208):
-            if(left_count > 0):
-                left_box.append(mybox[i])
-                left_count = left_count - 1
+        if( str_ang == '3' or str_ang == '4' or  str_ang == '5' ):
+            if(x < 208):
+                if(left_count > 0):
+                    left_box.append(mybox[i])
+                    left_count = left_count - 1
 
-        else:
-            if(right_count > 0):
-                right_box.append(mybox[i])
-                right_count = right_count - 1
+            else:
+                if(right_count > 0):
+                    right_box.append(mybox[i])
+                    right_count = right_count - 1
+
+        elif( str_ang == '0' or str_ang == '1' or str_ang == '2'):
+            lim_coor = 104
+            if( x < ((y + 416)/4) ):
+                if(left_count > 0):
+                    left_box.append(mybox[i])
+                    left_count = left_count - 1
+            else:
+                if(right_count > 0):
+                    right_box.append(mybox[i])
+                    right_count = right_count - 1
+
+        elif( str_ang == '6' or str_ang == '7' or str_ang == '8' ):
+            if( x > ((1248 - y)/4) ):
+                if(right_count > 0):
+                    right_box.append(mybox[i])
+                    right_count = right_count - 1
+
+            else:
+                if(left_count > 0):
+                    left_box.append(mybox[i])
+                    left_count = left_count - 1
+
 
 	
     #############################################################################

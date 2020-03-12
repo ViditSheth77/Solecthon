@@ -171,11 +171,11 @@ void loop() {
     digitalWrite(ENABLE_PIN, 1);
     digitalWrite(AENABLE_PIN, 1);
 
-    maxSpeed = 150;                   ///////////////////FOR MOTOR SPEED
+    maxSpeed = 200;                   ///////////////////FOR MOTOR SPEED
 
     act = 0;                              ///FOR RUNNING MOTOR 0 else 1 in actuator
     switch (a) {
-      /*case '0':
+      case '0':
         moveToPosition(-60 * G * R);
         break;
 
@@ -211,13 +211,9 @@ void loop() {
         moveToPosition( 60 * G * R );
         break;
 
-        case '9':
-        moveToPosition( 75 * G * R );
-        break;*/
-
-      case '0':
+      /*case '0':
         moveToPosition(-60 * G * R);
-        delay(500);//to take turn for some time
+        //to take turn for some time
         break;
 
       case '1':
@@ -234,8 +230,8 @@ void loop() {
 
       case '4':
         moveToPosition( 60 * G * R );
-        delay(500);
-        break;
+        
+        break;*/
 
       case 'a':
         analogWrite(11, 72);
