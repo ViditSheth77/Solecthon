@@ -12,18 +12,16 @@ import serial
 CAM_NUM = 3
 DANGER = 150
 
-a = range(-90,-75)
-b = range(-75,-60)
-c = range(-60,-45)
-d = range(-45,-30)
-e = range(-30,-15)
-f = range(-15,0)
-g = range(0,15)
-h = range(15,30)
-i = range(30,45)
-j = range(45,60)
-k = range(60,75)
-l = range(75,90)
+a = range(-75,-26)
+b = range(-26,-19)
+c = range(-19,-13)
+d = range(-13,-7)
+e = range(-7,0)
+f = range(0,7)
+g = range(7,13)
+h = range(13,19)
+i = range(19,26)
+j = range(26,75)
 
 m = range(-90,-26)
 n = range(-26,-12)
@@ -37,32 +35,29 @@ time.sleep(1.5)
 
 
 def steer(angle):
-    '''if( angle in a ):
+    if( angle in a ):
         return '0'
     elif( angle in b ):
         return '1'
     elif( angle in c ):
         return '2'
     elif( angle in d ):
-        return '2'
-    elif( angle in e ):
         return '3'
+    elif( angle in e ):
+        return '4'
     elif( angle in f ):
         return '4'
     elif( angle in g ):
-        return '4'
-    elif( angle in h ):
         return '5'
-    elif( angle in i ):
+    elif( angle in h ):
         return '6'
-    elif( angle in j ):
+    elif( angle in i ):
         return '7'
-    elif( angle in k ):
+    elif( angle in j ):
         return '8'
-    elif( angle in l):
-        return '9'
-    '''
-    if( angle in m ):
+    
+    
+    '''if( angle in m ):
         return '0'
     elif( angle in n ):
         return '1'
@@ -73,7 +68,7 @@ def steer(angle):
     elif( angle in r):
         return '4'
     return '2'
-    '''else:
+    else:
         print("OUT OF ANGLE!!!")'''
 
 def personDistance(person_coor):
@@ -189,7 +184,7 @@ def YOLO():
     path = 'http://192.168.43.156:4747/video'
     #cap = cv2.VideoCapture(path)
     cap = cv2.VideoCapture(CAM_NUM)
-    #cap = cv2.VideoCapture('test.mp4')
+    #cap = cv2.VideoCapture('video143.mp4')
     cap.set(3, 1280)
     cap.set(4, 720)
     out = cv2.VideoWriter(
@@ -251,7 +246,7 @@ def YOLO():
             #print(lines,'\n\n\n')
             if len(mybox) == 0:
                 counter = counter + 1
-                if counter == 27:
+                if counter == 30:
                     s.write(str.encode('c'))
                     counter = 0
 
@@ -311,10 +306,10 @@ def YOLO():
             #cv2.line(inv_image, (w//2,0), (w//2,h),(255,0,0),5)
             cv2.line(inv_image, (0, chcone.LIMIT_CONE), (416, chcone.LIMIT_CONE), (0,0,255), 1)
 
-            if( steering == '2' ):
+            if( steering == '4' ):
                 cv2.line(inv_image, (208, 0), (208, 416), (0,225,255), 1)
 
-            elif( steering == '0' or steering == '1' ):
+            elif( steering == '0' or steering == '1' or steering == '2' or steering == '3' ):
                 cv2.line(inv_image, (104, 0), (208, 416), (0,225,255), 1)
 
             else:
@@ -333,7 +328,7 @@ def YOLO():
             lines.clear()
             
     	
-            cv2.waitKey(100)
+            cv2.waitKey(3)
         except Exception as e:
             print(e)
             print('Exception aaya hai!!!!')
