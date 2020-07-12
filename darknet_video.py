@@ -9,8 +9,11 @@ import darknet
 import chcone
 import serial
 
-CAM_NUM = 3
 DANGER = 150
+ARDUINO_CONNECTED = False
+#cam_path = 3
+cam_path = 'test.mp4'
+#cam_path = 'http://192.168.43.156:4747/video'
 
 a = range(-75,-26)
 b = range(-26,-19)
@@ -31,12 +34,13 @@ q = range(12,26)
 r = range(26,90)
 
 # initializing which serial port to connect
-try:
-    s=serial.Serial('/dev/ttyACM0',chcone.BAUD_RATE)
-    print("Connected to : /dev/ttyACM0")
-except:
-    s=serial.Serial('/dev/ttyACM1',chcone.BAUD_RATE)
-    print("Connected to : /dev/ttyACM1")
+if(ARDUINO_CONNECTED):
+    try:
+        s=serial.Serial('/dev/ttyACM0',chcone.BAUD_RATE)
+        print("Connected to : /dev/ttyACM0")
+    except:
+        s=serial.Serial('/dev/ttyACM1',chcone.BAUD_RATE)
+        print("Connected to : /dev/ttyACM1")
 	
 # prevents : "car starts to move before program starts to execute"
 time.sleep(1.5)
@@ -187,15 +191,13 @@ def YOLO():
                     pass
         except Exception:
             pass
-    path = 'http://192.168.43.156:4747/video'
-    #cap = cv2.VideoCapture(path)
-    cap = cv2.VideoCapture(CAM_NUM)
-    #cap = cv2.VideoCapture('video143.mp4')
+    
+    cap = cv2.VideoCapture(cam_path)
     cap.set(3, 1280)
     cap.set(4, 720)
-    out = cv2.VideoWriter(
-        "output.avi", cv2.VideoWriter_fourcc(*"MJPG"), 10.0,
-        (darknet.network_width(netMain), darknet.network_height(netMain)))
+    #out = cv2.VideoWriter(
+    #    "output.avi", cv2.VideoWriter_fourcc(*"MJPG"), 10.0,
+    #    (darknet.network_width(netMain), darknet.network_height(netMain)))
     print("Starting the YOLO loop...")
 
     # Create an image we reuse for each detect
@@ -253,7 +255,8 @@ def YOLO():
             if len(mybox) == 0:
                 counter = counter + 1
                 if counter == 30:
-                    s.write(str.encode('c'))
+                    if(ARDUINO_CONNECTED):
+                        s.write(str.encode('c'))
                     counter = 0
 
 
@@ -293,7 +296,8 @@ def YOLO():
             angle_a = steer( (sum(angle_limit))//limit_frames )
             print( (sum(angle_limit))//limit_frames )
             if(steering != angle_a):
-                s.write(str.encode(angle_a))
+                if(ARDUINO_CONNECTED):
+                    s.write(str.encode(angle_a))
                 steering = angle_a
                 print( 'updated' )
 
@@ -322,7 +326,7 @@ def YOLO():
                 cv2.line(inv_image, (312, 0), (208, 416), (0,225,255), 1)                
 
 
-            inv_image = cv2.resize(inv_image, (800, 800))    
+            inv_image = cv2.resize(inv_image, (2*chcone.img_dim[0], 2*chcone.img_dim[0]))    
 
 
             cv2.imshow('transform', inv_image)
@@ -338,9 +342,10 @@ def YOLO():
         except Exception as e:
             print(e)
             print('Exception aaya hai!!!!')
-            s.write(str.encode('c'))
+            if(ARDUINO_CONNECTED):
+                s.write(str.encode('c'))
             break
     cap.release()
-    out.release()
+    #out.release()
 if __name__ == "__main__":
     YOLO()

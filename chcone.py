@@ -4,8 +4,8 @@ import math
 
 path = "http://192.168.43.156:4747/video"
 
-# YOLO input-image size
-img_dim = (416, 250) # (w, h) = (x, y)
+# inv map output-image size
+img_dim = (416, 285) # (w, h) = (x, y)
 
 # sampeling speed
 BAUD_RATE = 115200
@@ -26,7 +26,7 @@ pt_out = [(0         , 0         ),
 
 # threshold after which detections won't be considered
 # below variable represents threshold 'y' coordinate
-LIMIT_CONE = 230 
+LIMIT_CONE = 150 
 
 # when one side is empty of cones, this variable is used as offset
 mid_c = 80-5
@@ -85,11 +85,32 @@ def st_line( a, b, c, x, y ):
         return True# True means left side for left turn
     return False
 
+def line_x(direction_coor, cone_coor):
+    car_x, car_y = car_coor
+    cone_x, cone_y = cone_coor
+    direction_x, direction_y = direction_coor
+
+    slope = (direction_y - car_y) / (direction_x - car_x)
+
+    x_on_line = slope * (cone_y - car_y) - car_x
+
+    error = cone_x - x_on_line
+
+    if(error >= 0):
+        # cone on right side
+        # True indicates right side
+        return True
+    else:
+        # cone on left side
+        # False indicates left side
+        return False
+
 def pathplan(mybox, str_ang):
     left_box = []
     right_box = []
     left_count = 5
     right_count = 5
+    ratio = 0.25
 
     for i in range(len(mybox)):
         x, y = mybox[i]
@@ -105,8 +126,7 @@ def pathplan(mybox, str_ang):
                     right_count = right_count - 1
 
         elif( str_ang == '0' or str_ang == '1' or str_ang == '2'):
-            lim_coor = 104
-            if( x < ((y + 416)/4) ):
+            if( not line_x( (img_dim[0]*ratio, 0), (x, y) ) ):
                 if(left_count > 0):
                     left_box.append(mybox[i])
                     left_count = left_count - 1
@@ -116,7 +136,7 @@ def pathplan(mybox, str_ang):
                     right_count = right_count - 1
 
         elif( str_ang == '6' or str_ang == '7' or str_ang == '8' ):
-            if( x > ((1248 - y)/4) ):
+            if( line_x( ( img_dim[0] - img_dim[0]*ratio, 0), (x, y) ) ):
                 if(right_count > 0):
                     right_box.append(mybox[i])
                     right_count = right_count - 1
