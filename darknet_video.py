@@ -92,7 +92,6 @@ def convertBack(x, y, w, h):
     ymax = int(round(y + (h / 2)))
     return xmin, ymin, xmax, ymax
 
-
 def cvDrawBoxes(detections, img):
     for detection in detections:
         x, y, w, h = detection[2][0],\
@@ -111,8 +110,7 @@ def cvDrawBoxes(detections, img):
                     (pt1[0], pt1[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                     [0, 255, 0], 2)'''
     return img
-    
-    
+     
 def get_inv_coor(detections, img, M):
     mybox = []
     person = []
@@ -218,7 +216,7 @@ def YOLO():
             frame_resized = cv2.resize(frame_rgb,
                                        (darknet.network_width(netMain),
                                         darknet.network_height(netMain)),
-                                       interpolation=cv2.INTER_LINEAR)
+                                        interpolation=cv2.INTER_LINEAR)
             darknet.copy_image_from_bytes(darknet_image,frame_resized.tobytes())
 
             detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)
