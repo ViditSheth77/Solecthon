@@ -3,16 +3,30 @@ import numpy as np
 import math
 
 path = "http://192.168.43.156:4747/video"
-cap = cv2.VideoCapture('video.mp4')
 
-# Laptop camera 
-pt = [(0,100), (-600,416), (416,100), (1016,416)]
+# sampeling speed
+BAUD_RATE = 115200
 
-LIMIT_CONE = 230+30-30
-
-mid_c = 80-5
 # intel camera 
 #pt = [(0,225), (-1500,500), (600,225), (2100,500)]
+
+# Laptop camera 
+pt_in = [(0   , 100),
+	 (-600, 416),
+	 (416 , 100), 
+	 (1016, 416)]
+
+pt_out = [(0  , 0),
+	  (0  , 416), 
+	  (416, 0), 
+	  (416, 416)]
+
+# threshold after which detections won't be considered
+# below variable represents threshold 'y' coordinate
+LIMIT_CONE = 230 
+
+# when one side is empty of cones, this variable is used as offset
+mid_c = 80-5
 
 car_coor = (208,450-5)
 
@@ -129,8 +143,8 @@ def coneDetect(frame):
     return bounding_rects, img_res
 
 def inv_map(frame):
-    pts1 = np.float32([pt[0],pt[1],pt[2],pt[3]])
-    pts2 = np.float32([[0,0],[0,416],[416,0],[416,416]])
+    pts1 = np.float32(pt_in)
+    pts2 = np.float32(pt_out)
     M = cv2.getPerspectiveTransform(pts1,pts2)
     image = cv2.warpPerspective(frame,M,(416,416), flags=cv2.INTER_LINEAR)
     #cv2.imshow('itshouldlookfine!', image)

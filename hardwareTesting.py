@@ -6,7 +6,7 @@ This file communicates directly to actuating hardware for testing purpose
 import serial
 
 # sampeling speed
-BAUD_RATE = 115200
+from chcone import BAUD_RATE
 
 # initializing which serial port to connect
 try:
