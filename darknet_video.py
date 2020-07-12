@@ -32,11 +32,11 @@ r = range(26,90)
 
 # initializing which serial port to connect
 try:
+    s=serial.Serial('/dev/ttyACM0',chcone.BAUD_RATE)
 	print("Connected to : /dev/ttyACM0")
-	s=serial.Serial('/dev/ttyACM0',chcone.BAUD_RATE)
 except:
+    s=serial.Serial('/dev/ttyACM1',chcone.BAUD_RATE)
 	print("Connected to : /dev/ttyACM1")
-	s=serial.Serial('/dev/ttyACM1',chcone.BAUD_RATE)
 	
 # prevents : "car starts to move before program starts to execute"
 time.sleep(1.5)
