@@ -35,6 +35,11 @@ mid_c = 80-5
 car_coor = (img_dim[0]//2, img_dim[1]+25)
 
 def angle(p1, p2):
+    """
+    Computes angle w.r.t., car
+
+    :returns: angle w.r.t, car
+    """
     x, y = p1
     p, q = p2
     try:
@@ -47,6 +52,12 @@ def angle(p1, p2):
     return (90 + angle)
 
 def inv_map(frame):
+    """
+    Transforms given image to top-view image (used for visual debug)
+
+    :frame: front-view image
+    :returns: transformation matrix and transformed image
+    """
     pts1 = np.float32(pt_in)
     pts2 = np.float32(pt_out)
     M = cv2.getPerspectiveTransform(pts1,pts2)
@@ -54,38 +65,14 @@ def inv_map(frame):
     #cv2.imshow('itshouldlookfine!', image)
     return image, M
 
-def inv_coor(bounding_rects, M, image):
-    mybox = []
-    for detection in bounding_rects:
-
-        xmax = detection[0]
-        xmin = detection[1]
-        ymax = detection[2]
-        ymin = detection[3]
-        #print( ((xmax+xmin)//2), (ymax) )
-        pt1 = (int(xmin), int(ymin))
-        pt2 = (int(xmax), int(ymax))
-        cv2.circle(image,pt1, 5, (255,255,255), -1)
-        cv2.circle(image,pt2, 5, (255,255,255), -1)
-    #for rect in bounding_rects:
-        a = np.array([[( (xmax+xmin)//2 ), (ymax//1)]], dtype='float32')
-        a = np.array([a])
-        pointsOut = cv2.perspectiveTransform(a, M)
-        box = pointsOut[0][0][0], pointsOut[0][0][1]
-        mybox.append(box)
-        #print(pointsOut)
-    #mybox = sorted(mybox, key=lambda k:(k[1], k[0])).copy()
-    #mybox.reverse()
-    #abc = sorted(mybox, key=last)
-    print('boxall', mybox)
-    return mybox , image
-
-def st_line( a, b, c, x, y ):
-    if( a*x + b*y + c < 0 ):
-        return True# True means left side for left turn
-    return False
-
 def line_x(direction_coor, cone_coor):
+    """
+    Finds the position of cone w.r.t., line formed by given point and car coordinates
+
+    :direction_coor: coordinate to form the line
+    :cone_coor:      coordinate of cone
+    :returns:        position of cone w.r.t., virtual mid-line
+    """
     car_x, car_y = car_coor
     cone_x, cone_y = cone_coor
     direction_x, direction_y = direction_coor
@@ -97,15 +84,21 @@ def line_x(direction_coor, cone_coor):
     error = cone_x - x_on_line
 
     if(error >= 0):
-        # cone on right side
         # True indicates right side
         return True
     else:
-        # cone on left side
         # False indicates left side
         return False
 
 def pathplan(mybox, str_ang):
+    """
+    Separates top view coordinates as left and right boundary
+    Also uses prior steering angle 
+
+    :mybox:   list having all detections as top view coordinates
+    :str_ang: steering angle of previous time-step/frame
+    :returns: 3 lists having top view coordinates of left, right and midpoint 
+    """
     left_box = []
     right_box = []
     left_count = 5
@@ -219,13 +212,31 @@ def pathplan(mybox, str_ang):
     
     return left_box[::-1], right_box[::-1], lines[::-1]
 
-def pathbana(lines, inv_image):
+def pathbana(mybox, left_box, right_box, lines, inv_image):
+    """
+    JUST DRAWING function > draws left, right and midpoint top-view coordinates
+
+    :mybox:     list with all coordinates (top-view)
+    :left_box:  list with left side coordinates (top-view)
+    :right_box: list with right side coordinates (top-view)
+    :lines:     list with midpoint coordinates (top-view)
+    :inv_image: top-view image
+    :returns:   image with lines drawn
+    """
     for i in range(len(lines) - 1):
-        cv2.circle(inv_image,lines[i], 5, (0,0,0), -1) 	# Filled
-        #print( 'test4' )
-        inv_image = cv2.line(inv_image,lines[i],lines[i+1],(255,255,0),4)
+        cv2.circle(inv_image,lines[i], 5, (0,0,0), -1)
+        cv2.line(inv_image,lines[i],lines[i+1],(255,255,0),4)
     '''if(angle(lines[0], lines[1]) > 75 or angle(lines[0], lines[1]) < -75):
         lines.remove(1)'''
+
+    for i in range(len(mybox)):
+        cv2.circle(inv_image, mybox[i], 5, (0,255,255), -1)
+
+    for i in range(len(left_box)-1):
+        cv2.line(inv_image, left_box[i], left_box[i+1], (125, 125, 255), 3)
+
+    for i in range(len(right_box)-1):
+        cv2.line(inv_image, right_box[i], right_box[i+1], (0,0,0), 3)
 	
     #print( lines[0], lines[1] , angle(lines[0], lines[1]) )
 

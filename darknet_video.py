@@ -37,16 +37,26 @@ r = range(26,90)
 if(ARDUINO_CONNECTED):
     try:
         s=serial.Serial('/dev/ttyACM0',chcone.BAUD_RATE)
-        print("Connected to : /dev/ttyACM0")
+        print("Connecting to : /dev/ttyACM0")
     except:
-        s=serial.Serial('/dev/ttyACM1',chcone.BAUD_RATE)
-        print("Connected to : /dev/ttyACM1")
+        try:
+            print("failed...")
+            s=serial.Serial('/dev/ttyACM1',chcone.BAUD_RATE)
+            print("Connecting to : /dev/ttyACM1")
+        except:
+            print("failed... give port premission")
 	
 # prevents : "car starts to move before program starts to execute"
 time.sleep(1.5)
 
 
 def steer(angle):
+    """
+    Maps angle range to integer for sending to Arduino
+
+    :angle:   steering angle
+    :returns: mapped integer
+    """
     if( angle in a ):
         return '0'
     elif( angle in b ):
@@ -90,6 +100,12 @@ def personDistance(person_coor):
 	return distance
 
 def convertBack(x, y, w, h):
+    """
+    Converts detections output into x-y coordinates
+
+    :x, y: position of bounding box
+    :w, h: height and width of bounding box
+    """
     xmin = int(round(x - (w / 2)))
     xmax = int(round(x + (w / 2)))
     ymin = int(round(y - (h / 2)))
@@ -97,6 +113,10 @@ def convertBack(x, y, w, h):
     return xmin, ymin, xmax, ymax
 
 def cvDrawBoxes(detections, img):
+    """
+    *Currently disabled* 
+    Draws bounding box on image (front-view)
+    """
     for detection in detections:
         x, y, w, h = detection[2][0],\
             detection[2][1],\
@@ -115,7 +135,14 @@ def cvDrawBoxes(detections, img):
                     [0, 255, 0], 2)'''
     return img
      
-def get_inv_coor(detections, img, M):
+def get_inv_coor(detections, M):
+    """
+    Converts front-view coordinates (of cone) to top-view coordinates
+
+    :detections: front-view coordinates
+    :M: transformation matrix
+    :returns: top-view coordinates of cones and person
+    """
     mybox = []
     person = []
     for detection in detections:
@@ -142,7 +169,7 @@ def get_inv_coor(detections, img, M):
     mybox = sorted(mybox, key=lambda k:(k[1], k[0])).copy()
     #print(mybox[::-1],'\n')
 
-    return person, mybox[::-1], img
+    return person, mybox[::-1]
 
 
 
@@ -224,7 +251,6 @@ def YOLO():
             detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)
             image = cvDrawBoxes(detections, frame_resized)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            #print(1/(time.time()-prev_time))
 
             ######################################################
             #############   AAPNA CODE  ##########################
@@ -235,17 +261,19 @@ def YOLO():
             #print(inv_image.shape)
 
             # getting inv coordinates on person and cone
-            person, mybox, image = get_inv_coor(detections, image, M)
+            person, mybox = get_inv_coor(detections, M)
 
-            # alert in case of threat
+            # alert in case of threat *Trial*
+            '''
             if(len(person) != 0):
             	for human in person:
             		cv2.circle(inv_image, human, 5, (0,0,255), -1)
             		distance = personDistance(human)
-            		'''if(distance <= DANGER):
+            		if(distance <= DANGER):
             			print("U wanna Die?")
             		else:
-            			print("hatt be")'''
+            			print("hatt be")
+            '''
             
 
             left_box, right_box, lines = chcone.pathplan(mybox, steering)
@@ -259,27 +287,6 @@ def YOLO():
                         s.write(str.encode('c'))
                     counter = 0
 
-
-
-            ######################################################
-            ############### DRAWING ONLY    ######################
-            ######################################################
-
-            for i in range(len(mybox)):
-                cv2.circle(inv_image, mybox[i], 5, (0,255,255), -1)   # Filled
-
-            for i in range(len(left_box)-1):
-                cv2.line(inv_image, left_box[i], left_box[i+1], (125, 125, 255), 3)
-
-            for i in range(len(right_box)-1):
-                cv2.line(inv_image, right_box[i], right_box[i+1], (0,0,0), 3)
-
-            ######################################################
-            ######################################################
-
-
-
-
             # encode signal for steering control
             try:
             	angle = chcone.angle(lines[0], lines[1])
@@ -290,7 +297,7 @@ def YOLO():
 
             #########################
             angle_limit.append(angle)
-            del angle_limit[0]
+            angle_limit.pop(0)
             #########################
 
             angle_a = steer( (sum(angle_limit))//limit_frames )
@@ -302,7 +309,7 @@ def YOLO():
                 print( 'updated' )
 
             # JUST DRAWING
-            inv_image = chcone.pathbana(lines, inv_image)
+            inv_image = chcone.pathbana(mybox, left_box, right_box, lines, inv_image)
             cv2.circle(image,chcone.pt[0], 5, (255,255,255), -1)
             cv2.circle(image,chcone.pt[1], 5, (255,255,255), -1)
             cv2.circle(image,chcone.pt[2], 5, (255,255,255), -1)
@@ -317,13 +324,15 @@ def YOLO():
             cv2.line(inv_image, (0, chcone.LIMIT_CONE), (416, chcone.LIMIT_CONE), (0,0,255), 1)
 
             if( steering == '4' ):
-                cv2.line(inv_image, (208, 0), (208, 416), (0,225,255), 1)
+                cv2.line(inv_image, (chcone.img_dim[0]//2, 0), chcone.car_coor, (0,225,255), 1)
 
             elif( steering == '0' or steering == '1' or steering == '2' or steering == '3' ):
-                cv2.line(inv_image, (104, 0), (208, 416), (0,225,255), 1)
+                cv2.line(inv_image, (chcone.img_dim[0]*chcone.ratio, 0), 
+                                     chcone.car_coor, (0,225,255), 1)
 
             else:
-                cv2.line(inv_image, (312, 0), (208, 416), (0,225,255), 1)                
+                cv2.line(inv_image, (chcone.img_dim[0] - chcone.img_dim[0]*chcone.ratio, 0), 
+                                     chcone.car_coor, (0,225,255), 1)                
 
 
             inv_image = cv2.resize(inv_image, (2*chcone.img_dim[0], 2*chcone.img_dim[0]))    
@@ -331,7 +340,7 @@ def YOLO():
 
             cv2.imshow('transform', inv_image)
         
-                # clear lists
+            # clear lists
             mybox.clear()
             left_box.clear()
             right_box.clear()
