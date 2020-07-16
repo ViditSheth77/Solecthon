@@ -10,6 +10,7 @@ import chcone
 import serial
 
 DANGER = 150
+MAX_CONELESS_FRAMES = 30
 ARDUINO_CONNECTED = False
 #cam_path = 3
 cam_path = 'test.mp4'
@@ -248,7 +249,8 @@ def YOLO():
                                         interpolation=cv2.INTER_LINEAR)
             darknet.copy_image_from_bytes(darknet_image,frame_resized.tobytes())
 
-            detections = darknet.detect_image(netMain, metaMain, darknet_image, thresh=0.25)
+            detections = darknet.detect_image(netMain, metaMain, 
+                                              darknet_image, thresh=0.25)
             image = cvDrawBoxes(detections, frame_resized)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -256,9 +258,22 @@ def YOLO():
             #############   AAPNA CODE  ##########################
             ######################################################
 
+            # Walkthrough:
+            # 1. get frame from camera
+            # 2. run object detector and get bounding box
+            # 3. transform front-view to top-view
+            #    (aka., inverse perspective transform)
+            # 4. mark cones as left or right
+            # 5. generate midpoint coordinates
+            # 6. find angle of a line pointing to first midpoint
+            #    (w.r.t., y-axis)
+            # 7. send this angle to Arduino control
+            # 8. bus aur kuch nahi, simple sa code hai
+            #    abhi tho bhoot kuch naya implement karna hai
+
+
             # simple inv transform
             inv_image, M = chcone.inv_map(image)
-            #print(inv_image.shape)
 
             # getting inv coordinates on person and cone
             person, mybox = get_inv_coor(detections, M)
@@ -275,69 +290,57 @@ def YOLO():
             			print("hatt be")
             '''
             
-
+            # separates cones and makes a mid-point path
             left_box, right_box, lines = chcone.pathplan(mybox, steering)
-            #print(left_box, '\n')
-            #print(right_box,'\n')
-            #print(lines,'\n\n\n')
+            
+            # stop the car if no cones found for *MAX_NO_CONE_FRAMES* frames
             if len(mybox) == 0:
                 counter = counter + 1
-                if counter == 30:
+                if counter == MAX_CONELESS_FRAMES:
                     if(ARDUINO_CONNECTED):
                         s.write(str.encode('c'))
                     counter = 0
 
             # encode signal for steering control
-            try:
-            	angle = chcone.angle(lines[0], lines[1])
-            except:
-            	angle = chcone.angle(lines[0], lines[1])
-
+            angle = chcone.angle(lines[0], lines[1])
             angle = math.floor(angle)
 
-            #########################
+            # Takes average turning/steering angle of *limit_frames* frames
             angle_limit.append(angle)
             angle_limit.pop(0)
-            #########################
-
             angle_a = steer( (sum(angle_limit))//limit_frames )
             print( (sum(angle_limit))//limit_frames )
+            
+            # Prevents Arduino buffer overlfow,   
             if(steering != angle_a):
                 if(ARDUINO_CONNECTED):
                     s.write(str.encode(angle_a))
                 steering = angle_a
                 print( 'updated' )
 
-            # JUST DRAWING
+            # *JUST DRAWING* for front-view
             inv_image = chcone.pathbana(mybox, left_box, right_box, lines, inv_image)
             cv2.circle(image,chcone.pt[0], 5, (255,255,255), -1)
             cv2.circle(image,chcone.pt[1], 5, (255,255,255), -1)
             cv2.circle(image,chcone.pt[2], 5, (255,255,255), -1)
             cv2.circle(image,chcone.pt[3], 5, (255,255,255), -1)
-            image = cv2.resize(image, (800, 800))
-            cv2.imshow('image', image)
             
+            # *JUST DRAWING* for top-view
             cv2.circle(inv_image, chcone.car_coor, DANGER, (0,0,225), 2)
-            h, w, c = inv_image.shape
-            #draws center line
-            #cv2.line(inv_image, (w//2,0), (w//2,h),(255,0,0),5)
             cv2.line(inv_image, (0, chcone.LIMIT_CONE), (416, chcone.LIMIT_CONE), (0,0,255), 1)
-
             if( steering == '4' ):
                 cv2.line(inv_image, (chcone.img_dim[0]//2, 0), chcone.car_coor, (0,225,255), 1)
-
             elif( steering == '0' or steering == '1' or steering == '2' or steering == '3' ):
                 cv2.line(inv_image, (chcone.img_dim[0]*chcone.ratio, 0), 
                                      chcone.car_coor, (0,225,255), 1)
-
             else:
                 cv2.line(inv_image, (chcone.img_dim[0] - chcone.img_dim[0]*chcone.ratio, 0), 
                                      chcone.car_coor, (0,225,255), 1)                
 
-
+            # shows image on screen
+            image = cv2.resize(image, (800, 800))
+            cv2.imshow('image', image)
             inv_image = cv2.resize(inv_image, (2*chcone.img_dim[0], 2*chcone.img_dim[0]))    
-
-
             cv2.imshow('transform', inv_image)
         
             # clear lists
@@ -346,11 +349,13 @@ def YOLO():
             right_box.clear()
             lines.clear()
             
-    	
+    	    # dont know why? but necessary
             cv2.waitKey(3)
         except Exception as e:
             print(e)
             print('Exception aaya hai!!!!')
+
+            # any kind of exception must stop the car
             if(ARDUINO_CONNECTED):
                 s.write(str.encode('c'))
             break
