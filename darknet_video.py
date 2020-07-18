@@ -293,7 +293,7 @@ def YOLO():
             # separates cones and makes a mid-point path
             left_box, right_box, lines = chcone.pathplan(mybox, steering)
             
-            # stop the car if no cones found for *MAX_NO_CONE_FRAMES* frames
+            # stop the car if no cones found for *MAX_CONELESS_FRAMES* frames
             if len(mybox) == 0:
                 counter = counter + 1
                 if counter == MAX_CONELESS_FRAMES:
