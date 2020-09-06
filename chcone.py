@@ -79,7 +79,7 @@ def line_x(direction_coor, cone_coor):
 
     slope = (direction_y - car_y) / (direction_x - car_x)
 
-    x_on_line = slope * (cone_y - car_y) - car_x
+    x_on_line = (cone_y - car_y)/slope - car_x
 
     error = cone_x - x_on_line
 
